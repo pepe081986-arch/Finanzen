@@ -525,15 +525,12 @@
                 recurringListSection.style.display = "block";
                 recurringListEl.innerHTML = ""; // Liste leeren
 
-                // Templates in Einnahmen und Ausgaben trennen und chronologisch sortieren
                 const incomeTemplates = templates.filter(t => t.type === "income").sort((a, b) => b.id - a.id);
                 const expenseTemplates = templates.filter(t => t.type === "expense").sort((a, b) => b.id - a.id);
 
-                // Hilfsfunktion zum Erstellen der Karten
                 const createTemplateCard = (t) => {
                     const item = document.createElement("div");
                     item.className = "item-card";
-                    // Einnahmen bekommen einen grünen Balken, Ausgaben einen blauen/Standard-Balken
                     item.style.borderLeft = t.type === "income" ? "4px solid var(--success)" : "4px solid var(--primary)";
                     item.style.background = "#f8fafc";
                     const prefix = t.type === "income" ? "+" : "-";
@@ -544,16 +541,14 @@
                         </div>
                         <div class="item-right">
                             <span class="item-amount" style="${t.type === 'income' ? 'color: var(--success);' : 'color: var(--danger);'}">${prefix} ${formatCurrency(t.amount)}</span>
+                            <button class="btn-edit" data-id="${t.id}" style="background: #e2e8f0; color: #475569; width: 28px; height: 28px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; border: none;">✏️</button>
                             <button class="btn-delete" data-id="${t.id}">×</button>
                         </div>
                     `;
                     return item;
                 };
 
-                // 1. Zuerst alle Einnahmen-Daueraufträge anhängen
                 incomeTemplates.forEach(t => recurringListEl.appendChild(createTemplateCard(t)));
-
-                // 2. Danach alle Ausgaben-Daueraufträge anhängen
                 expenseTemplates.forEach(t => recurringListEl.appendChild(createTemplateCard(t)));
 
             } else {
@@ -698,20 +693,91 @@
         });
     });
 
-    if (form) {
+ if (form) {
         form.addEventListener("submit", (e) => {
-            e.preventDefault(); const isTemplate = isRecurringCheckbox.checked; const currentCatSelect = document.getElementById("category");
-            transactions.push({
-                id: Number(Date.now()), type: currentType, amount: parseFloat(amountInput.value),
-                account: accountSelect.value, category: currentCatSelect ? currentCatSelect.value : "Sonstiges",
-                date: dateInput.value, description: descInput.value.trim(), isTemplate: isTemplate, interval: isTemplate ? intervalSelect.value : "1"
-            });
+            e.preventDefault(); 
+            const isTemplate = isRecurringCheckbox.checked; 
+            const currentCatSelect = document.getElementById("category");
+            const selectedCategory = currentCatSelect ? currentCatSelect.value : "Sonstiges";
+
+            if (editModeTemplateId !== null) {
+                // FALL A: BEREITS BESTEHENDEN DAUERAUFTRAG AKTUALISIEREN
+                transactions = transactions.map(t => {
+                    if (Number(t.id) === editModeTemplateId) {
+                        return {
+                            ...t,
+                            type: currentType,
+                            amount: parseFloat(amountInput.value),
+                            account: accountSelect.value,
+                            category: selectedCategory,
+                            date: dateInput.value,
+                            description: descInput.value.trim(),
+                            isTemplate: isTemplate,
+                            interval: isTemplate ? intervalSelect.value : "1"
+                        };
+                    }
+                    return t;
+                });
+                
+                // Bearbeitungsmodus zurücksetzen
+                editModeTemplateId = null;
+                const submitBtn = form.querySelector("button[type='submit']");
+                if (submitBtn) submitBtn.textContent = "Buchung speichern";
+            } else {
+                // FALL B: NEUE TRANSAKTION / NEUEN DAUERAUFTRAG ANLEGEN (Wie vorher)
+                transactions.push({
+                    id: Number(Date.now()), type: currentType, amount: parseFloat(amountInput.value),
+                    account: accountSelect.value, category: selectedCategory,
+                    date: dateInput.value, description: descInput.value.trim(), isTemplate: isTemplate, interval: isTemplate ? intervalSelect.value : "1"
+                });
+            }
+
+            // In LocalStorage sichern und UI leeren/neu rendern
             localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
             amountInput.value = ""; descInput.value = ""; isRecurringCheckbox.checked = false; intervalGroup.style.display = "none";
             setTodayDate(); autoRunRecurring(); updateUI();
         });
     }
+    
+// Speichert die ID des Dauerauftrags, der gerade bearbeitet wird
+    let editModeTemplateId = null;
 
+    document.addEventListener("click", (e) => {
+        // BEARBEITEN MODUS AKTIVIEREN
+        if (e.target.classList.contains("btn-edit") || e.target.closest(".btn-edit")) {
+            const targetBtn = e.target.classList.contains("btn-edit") ? e.target : e.target.closest(".btn-edit");
+            const templateId = Number(targetBtn.dataset.id);
+            const tmpl = transactions.find(t => Number(t.id) === templateId);
+            
+            if (tmpl) {
+                editModeTemplateId = templateId;
+                
+                // Formularfelder befüllen
+                currentType = tmpl.type;
+                typeButtons.forEach(b => {
+                    b.classList.remove("active");
+                    if(b.dataset.type === currentType) b.classList.add("active");
+                });
+                updateCategoryOptions();
+                
+                amountInput.value = tmpl.amount;
+                accountSelect.value = tmpl.account;
+                const currentCatSelect = document.getElementById("category");
+                if (currentCatSelect) currentCatSelect.value = tmpl.category;
+                dateInput.value = tmpl.date;
+                descInput.value = tmpl.description;
+                
+                isRecurringCheckbox.checked = true;
+                intervalGroup.style.display = "block";
+                intervalSelect.value = tmpl.interval || "1";
+                
+                // Button-Text anpassen und Formular in den Fokus rücken
+                const submitBtn = form.querySelector("button[type='submit']");
+                if (submitBtn) submitBtn.textContent = "Dauerauftrag aktualisieren 💾";
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    });
     document.addEventListener("click", (e) => {
         if (e.target.classList.contains("btn-delete")) {
             transactions = transactions.filter(t => Number(t.id) !== Number(e.target.dataset.id));
