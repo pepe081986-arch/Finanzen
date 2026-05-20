@@ -108,7 +108,7 @@
             display: grid;
             grid-template-columns: 1fr;
             gap: 12px;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
 
         .card {
@@ -148,6 +148,13 @@
             margin-top: 6px;
             color: #059669;
             font-weight: 500;
+        }
+
+        .cycle-info {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-style: italic;
         }
 
         /* Backup Hinweis-Banner */
@@ -253,26 +260,92 @@
             background-color: var(--primary-hover);
         }
 
-        /* Excel Buttons */
-        .excel-actions {
+        /* NEUES BUTTON-LAYOUT (OPTIMIERT NACH WUNSCH) */
+        .action-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .btn-charts {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            padding: 14px;
+            font-size: 1rem;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.15);
+        }
+        .btn-charts:active {
+            background: #4338ca;
+        }
+
+        .backup-row {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-            margin-bottom: 16px;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
         }
 
         .btn-excel {
             background-color: var(--excel);
-            padding: 12px;
+            padding: 10px;
+            font-size: 0.85rem;
         }
         .btn-excel:active {
             background-color: var(--excel-hover);
         }
         .btn-import {
             background-color: #475569;
+            padding: 10px;
+            font-size: 0.85rem;
         }
         .btn-import:active {
             background-color: #334155;
+        }
+
+        /* DIAGRAMM / CHART SEKTION STYLE */
+        .chart-box {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-top: 10px;
+        }
+
+        .chart-row {
+            margin-bottom: 12px;
+        }
+
+        .chart-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .chart-bar-bg {
+            background-color: #f1f5f9;
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .chart-bar-fill {
+            height: 100%;
+            background-color: var(--primary);
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        .chart-summary-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border-color);
+            font-size: 0.85rem;
         }
 
         /* Mobile Transaktionsliste */
@@ -387,19 +460,29 @@
     <div class="dashboard">
         <div class="card highlight">
             <h3>Verfügbares Vermögen (Giro)</h3>
-            <div class="balance" id="display-giro">2.444,11 €</div>
+            <div class="balance" id="display-giro">0,00 €</div>
+            <div class="cycle-info" id="display-cycle-dates">Gehaltsmonat: Lädt...</div>
         </div>
         <div class="card">
             <h3>Sparkonto</h3>
-            <div class="balance" id="display-sparen">400,00 €</div>
-            <div class="prognosis-text" id="display-prognosis">Prognose (12 Monate): 5.200,00 €</div>
+            <div class="balance" id="display-sparen">0,00 €</div>
+            <div class="prognosis-text" id="display-prognosis">Prognose (12 Monate): 0,00 €</div>
         </div>
     </div>
 
-    <div class="excel-actions">
-        <button class="btn-excel" id="btn-export-excel">📊 Daten nach Excel exportieren</button>
-        <button class="btn-import" id="btn-trigger-file">📅 Backup aus Excel importieren</button>
+    <div class="action-grid">
+        <button class="btn-charts" id="btn-toggle-charts">📈 Grafische Auswertung einblenden</button>
+        <div class="backup-row">
+            <button class="btn-excel" id="btn-export-excel">📊 Excel-Export</button>
+            <button class="btn-import" id="btn-trigger-file">📅 Backup Import</button>
+        </div>
         <input type="file" id="excel-file-input" accept=".xlsx" style="display: none;">
+    </div>
+
+    <div class="section" id="charts-section" style="display: none;">
+        <h2>Kategorien & Auswertung</h2>
+        <div class="chart-box" id="chart-box-container">
+            </div>
     </div>
 
     <div class="section" id="recurring-trigger-section" style="display: none;">
@@ -470,14 +553,12 @@
 
     <div class="section" id="recurring-list-section" style="display: none;">
         <h2>Meine Daueraufträge & Abos</h2>
-        <div class="list-container" id="recurring-list">
-            </div>
+        <div class="list-container" id="recurring-list"></div>
     </div>
 
     <div class="section">
-        <h2>Letzte Buchungen</h2>
-        <div class="list-container" id="transaction-list">
-            </div>
+        <h2>Buchungen im laufenden Abrechnungsmonat</h2>
+        <div class="list-container" id="transaction-list"></div>
     </div>
 </div>
 
@@ -487,31 +568,82 @@
         sparen: 400.00
     };
 
-    const accountNames = {
-        giro: "Giro",
-        sparen: "Sparen"
-    };
-    
-    const accountKeys = {
-        "Giro": "giro",
-        "Sparen": "sparen"
-    };
-
-    const intervalLabels = {
-        "1": "Monatlich",
-        "2": "Alle 2 Monate",
-        "3": "Vierteljährlich",
-        "6": "Halbjährlich",
-        "12": "Jährlich"
-    };
+    const accountNames = { giro: "Giro", sparen: "Sparen" };
+    const accountKeys = { "Giro": "giro", "Sparen": "sparen" };
+    const intervalLabels = { "1": "Monatlich", "2": "Alle 2 Monate", "3": "Vierteljährlich", "6": "Halbjährlich", "12": "Jährlich" };
 
     const categories = {
         expense: ["Wohnen", "Lebensmittel", "Freizeit", "Mobilität", "Sparen/Anlage", "Sonstiges"],
         income: ["Gehalt", "Zinsen", "Geschenk", "Sonstiges"]
     };
 
+    // Statische Liste deutscher Feiertage (Bundeseinheitlich + NRW da relevant)
+    function istFeiertagOderWochenende(date) {
+        const d = new Date(date);
+        const day = d.getDay();
+        if (day === 0 || day === 6) return true; // Wochenende
+
+        const m = d.getMonth() + 1;
+        const tag = d.getDate();
+        
+        // Feste Feiertage
+        if (m === 1 && tag === 1) return true;   // Neujahr
+        if (m === 5 && tag === 1) return true;   // 1. Mai
+        if (m === 10 && tag === 3) return true;  // Tag d. dt. Einheit
+        if (m === 11 && tag === 1) return true;  // Allerheiligen
+        if (m === 12 && tag === 25) return true; // 1. Weihnachtstag
+        if (m === 12 && tag === 26) return true; // 2. Weihnachtstag
+        
+        return false;
+    }
+
+    // INTELLIGENTE GEHALTS-DATUMS-BERECHNUNG (Werktag-Regel)
+    function getEchtesGehaltsDatum(jahr, monat) {
+        let gDate = new Date(jahr, monat, 16);
+        while (istFeiertagOderWochenende(gDate)) {
+            gDate.setDate(gDate.getDate() - 1); // Solange einen Tag zurückgehen, bis es ein Werktag ist
+        }
+        gDate.setHours(0,0,0,0);
+        return gDate;
+    }
+
+    // Bestimmt den aktuellen Gehalts-Zeitraum (Abrechnungsmonat) basierend auf dem heutigen Kalendertag
+    function getAktuellerAbrechnungsZeitraum() {
+        const heute = new Date();
+        heute.setHours(0,0,0,0);
+        
+        let zielMonat = heute.getMonth();
+        let zielJahr = heute.getFullYear();
+        
+        let gehaltDiesenMonat = getEchtesGehaltsDatum(zielJahr, zielMonat);
+        
+        let von, bis;
+        
+        if (heute >= gehaltDiesenMonat) {
+            // Wir sind im laufenden Gehaltsmonat (z.B. ab 16. Mai) -> geht bis vor dem Gehalt im Juni
+            von = gehaltDiesenMonat;
+            let naechsterMonat = zielMonat + 1;
+            let naechstesJahr = zielJahr;
+            if (naechsterMonat > 11) { naechsterMonat = 0; naechstesJahr++; }
+            bis = new Date(getEchtesGehaltsDatum(naechstesJahr, naechsterMonat));
+            bis.setDate(bis.getDate() - 1); // Bis einen Tag vor dem nächsten Gehalt
+        } else {
+            // Wir sind vor dem 16. (z.B. 10. Mai) -> Gehaltsmonat startete im April
+            let vorigerMonat = zielMonat - 1;
+            let vorigesJahr = zielJahr;
+            if (vorigerMonat < 0) { vorigerMonat = 11; vorigesJahr--; }
+            von = getEchtesGehaltsDatum(vorigesJahr, vorigerMonat);
+            bis = new Date(gehaltDiesenMonat);
+            bis.setDate(bis.getDate() - 1);
+        }
+        
+        von.setHours(0,0,0,0);
+        bis.setHours(23,59,59,999);
+        return { von, bis };
+    }
+
     let currentType = "expense";
-    let transactions = JSON.parse(localStorage.getItem("mob_budget_trans_v3")) || [];
+    let transactions = JSON.parse(localStorage.getItem("mob_budget_trans_v4")) || [];
 
     const form = document.getElementById("transaction-form");
     const typeButtons = document.querySelectorAll(".type-btn");
@@ -532,11 +664,23 @@
     const btnTriggerFile = document.getElementById("btn-trigger-file");
     const excelFileInput = document.getElementById("excel-file-input");
     const backupBanner = document.getElementById("backup-alert-banner");
+    
+    // Chart UI Elemente
+    const btnToggleCharts = document.getElementById("btn-toggle-charts");
+    const chartsSection = document.getElementById("charts-section");
+    const chartBoxContainer = document.getElementById("chart-box-container");
 
-    // Steuerung für das dynamische Einblenden des Intervalls
     if (isRecurringCheckbox) {
         isRecurringCheckbox.addEventListener("change", (e) => {
             intervalGroup.style.display = e.target.checked ? "block" : "none";
+        });
+    }
+
+    if (btnToggleCharts) {
+        btnToggleCharts.addEventListener("click", () => {
+            const hidden = chartsSection.style.display === "none";
+            chartsSection.style.display = hidden ? "block" : "none";
+            btnToggleCharts.textContent = hidden ? "📉 Grafische Auswertung ausblenden" : "📈 Grafische Auswertung einblenden";
         });
     }
 
@@ -558,15 +702,13 @@
 
     function setTodayDate() {
         if (dateInput) {
-            const today = new Date().toISOString().split('T')[0];
-            dateInput.value = today;
+            dateInput.value = new Date().toISOString().split('T')[0];
         }
     }
 
     function updateCategoryOptions() {
         const catSelect = document.getElementById("category");
         if (!catSelect) return;
-        
         catSelect.innerHTML = "";
         categories[currentType].forEach(cat => {
             const option = document.createElement("option");
@@ -582,32 +724,16 @@
             if (backupBanner) backupBanner.style.display = "flex";
             return;
         }
-        
         const daysSinceBackup = (Date.now() - parseInt(lastBackup)) / (1000 * 60 * 60 * 24);
-        if (daysSinceBackup >= 3) {
-            if (backupBanner) backupBanner.style.display = "flex";
-        } else {
-            if (backupBanner) backupBanner.style.display = "none";
-        }
+        if (backupBanner) backupBanner.style.display = daysSinceBackup >= 3 ? "flex" : "none";
     }
 
-    // Hilfsfunktion: Berechnet, ob ein Dauerauftrag in einem bestimmten Zielmonat fällig ist
     function isTemplateDueInMonth(template, targetYear, targetMonth) {
         if (!template.date) return false;
-        
         const startDate = new Date(template.date);
-        const startYear = startDate.getFullYear();
-        const startMonth = startDate.getMonth(); // 0-11
-        
-        // Berechne die Differenz in Monaten
-        const monthsDiff = (targetYear - startYear) * 12 + (targetMonth - startMonth);
-        
-        // Wenn das Startdatum in der Zukunft liegt, ist es nicht fällig
+        const monthsDiff = (targetYear - startDate.getFullYear()) * 12 + (targetMonth - startDate.getMonth());
         if (monthsDiff < 0) return false;
-        
-        // Fällig, wenn die Monatsdifferenz glatt durch das Intervall teilbar ist
-        const interval = parseInt(template.interval || "1");
-        return (monthsDiff % interval) === 0;
+        return (monthsDiff % parseInt(template.interval || "1")) === 0;
     }
 
     function updateUI() {
@@ -619,12 +745,24 @@
         const templates = transactions.filter(t => t.isTemplate);
         const realTransactions = transactions.filter(t => !t.isTemplate);
 
+        const heuteMitzternacht = new Date();
+        heuteMitzternacht.setHours(0,0,0,0);
+
+        // Gehaltszyklus ermitteln
+        const zyklus = getAktuellerAbrechnungsZeitraum();
+        const displayCycleEl = document.getElementById("display-cycle-dates");
+        if (displayCycleEl) {
+            displayCycleEl.textContent = `Abrechnungszeitraum: ${formatDate(zyklus.von)} - ${formatDate(zyklus.bis)}`;
+        }
+
+        // 1. KONTOSTAND: Nur Buchungen berechnen, die in der Vergangenheit oder HEUTE liegen
         realTransactions.forEach(t => {
             const amt = parseFloat(t.amount);
-            if (t.type === "income") {
-                balances[t.account] += amt;
-            } else {
-                balances[t.account] -= amt;
+            const bDate = new Date(t.date);
+            bDate.setHours(0,0,0,0);
+
+            if (bDate <= heuteMitzternacht) {
+                if (t.type === "income") balances[t.account] += amt; else balances[t.account] -= amt;
             }
         });
 
@@ -635,50 +773,51 @@
         if (displayGiroEl) displayGiroEl.textContent = formatCurrency(balances.giro);
         if (displaySparenEl) displaySparenEl.textContent = formatCurrency(balances.sparen);
 
-       // --- VEREINFACHTE & DYNAMISCHE 12-MONATS-PROGNOSE ---
+        // 2. PROGNOSE (Rein auf Basis geplanter Daueraufträge des Sparkontos)
         let projectedSavings = balances.sparen;
         const heute = new Date();
         
         for (let i = 1; i <= 12; i++) {
-            // KEINE feste Sparrate mehr! Die Berechnung basiert rein auf deinen hinterlegten Daueraufträgen.
-            
             let futureMonth = heute.getMonth() + i;
             let futureYear = heute.getFullYear();
-            if (futureMonth > 11) {
-                futureYear += Math.floor(futureMonth / 12);
-                futureMonth = futureMonth % 12;
-            }
+            if (futureMonth > 11) { futureYear += Math.floor(futureMonth / 12); futureMonth = futureMonth % 12; }
 
             templates.forEach(tmpl => {
-                // Wir prüfen, ob der Dauerauftrag das Sparkonto betrifft und in diesem zukünftigen Monat fällig ist
                 if (tmpl.account === "sparen" && isTemplateDueInMonth(tmpl, futureYear, futureMonth)) {
                     const amt = parseFloat(tmpl.amount);
-                    if (tmpl.type === "income") {
-                        projectedSavings += amt;
-                    } else {
-                        projectedSavings -= amt;
-                    }
+                    if (tmpl.type === "income") projectedSavings += amt; else projectedSavings -= amt;
                 }
             });
         }
         if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(projectedSavings)}`;
 
-        // Prüfen, welche Daueraufträge DIESEN Monat fällig sind
-        const currentYear = heute.getFullYear();
-        const currentMonth = heute.getMonth();
-        
-        const faelligeTemplates = templates.filter(tmpl => isTemplateDueInMonth(tmpl, currentYear, currentMonth));
+        // 3. DAUERAUFTRÄGE FÜR DIESEN AKTUELLEN GEHALTSMONAT PRÜFEN
+        // Ein Dauerauftrag ist fällig, wenn sein Tag innerhalb des Zyklus liegt und noch nicht gebucht wurde
+        const faelligeTemplates = templates.filter(tmpl => {
+            const tTag = parseInt(getDayFromDate(tmpl.date));
+            // Wir bauen ein fiktives Fälligkeitsdatum im aktuellen Abrechnungsfenster
+            let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
+            if (checkDate < zyklus.von) {
+                checkDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
+            }
+            
+            // Liegt der Stichtag im Zyklus?
+            if (checkDate >= zyklus.von && checkDate <= zyklus.bis) {
+                // Prüfen ob bereits eine Buchung mit "[Abo]" Kennung existiert
+                const bereitsGebucht = realTransactions.some(rt => 
+                    rt.description.includes(tmpl.description) && 
+                    new Date(rt.date) >= zyklus.von && 
+                    new Date(rt.date) <= zyklus.bis
+                );
+                return !bereitsGebucht;
+            }
+            return false;
+        });
 
-        if (recurringSection) {
-            recurringSection.style.display = faelligeTemplates.length > 0 ? "block" : "none";
-        }
-        
-        if (recurringTriggerTitle) {
-            const monatsName = heute.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
-            recurringTriggerTitle.textContent = `Buchungen für ${monatsName}`;
-        }
-        
-        // --- 1. RENDER: DAUERAUFTRÄGE ---
+        if (recurringSection) recurringSection.style.display = faelligeTemplates.length > 0 ? "block" : "none";
+        if (recurringTriggerTitle) recurringTriggerTitle.textContent = "Fällige Daueraufträge verbuchen";
+
+        // 4. DAUERAUFTRÄGE AUFLISTEN
         if (recurringListSection) {
             if (templates.length > 0) {
                 recurringListSection.style.display = "block";
@@ -687,18 +826,14 @@
                     item.className = "item-card";
                     item.style.borderLeft = "4px solid var(--primary)";
                     item.style.background = "#f8fafc";
-
                     const prefix = t.type === "income" ? "+" : "-";
-                    const colorStyle = t.type === "income" ? "color: var(--success);" : "color: var(--danger);";
-                    const intervalText = intervalLabels[t.interval || "1"] || "Monatlich";
-
                     item.innerHTML = `
                         <div class="item-details">
-                            <span class="item-title">${t.description} <span class="badge-recurring">${intervalText}</span></span>
-                            <span class="item-sub">Stichtag: Tag ${getDayFromDate(t.date)} • ${accountNames[t.account]}</span>
+                            <span class="item-title">${t.description} <span class="badge-recurring">${intervalLabels[t.interval || "1"]}</span></span>
+                            <span class="item-sub">Tag: ${getDayFromDate(t.date)} • ${accountNames[t.account]}</span>
                         </div>
                         <div class="item-right">
-                            <span class="item-amount" style="${colorStyle}">${prefix} ${formatCurrency(t.amount)}</span>
+                            <span class="item-amount" style="${t.type === 'income' ? 'color: var(--success);' : 'color: var(--danger);'}">${prefix} ${formatCurrency(t.amount)}</span>
                             <button class="btn-delete" data-id="${t.id}">×</button>
                         </div>
                     `;
@@ -709,25 +844,30 @@
             }
         }
 
-        // --- 2. RENDER: ECHTE BUCHUNGEN ---
+        // 5. BUCHUNGSVERLAUF (NUR LAUFENDER GEHALTSMONAT)
+        // Zeigt alle Buchungen an, die zeitlich in den aktuellen Zyklus gehören (auch zukünftige dieses Monats)
+        const aktuelleAbrechnungsBuchungen = realTransactions.filter(t => {
+            const bDate = new Date(t.date);
+            return bDate >= zyklus.von && bDate <= zyklus.bis;
+        });
+
         if (transactionList) {
-            if (realTransactions.length === 0) {
-                transactionList.innerHTML = `<div class="empty-state">Noch keine Buchungen vorhanden.</div>`;
+            if (aktuelleAbrechnungsBuchungen.length === 0) {
+                transactionList.innerHTML = `<div class="empty-state">Keine Buchungen im Abrechnungszeitraum (${formatDate(zyklus.von)} - ${formatDate(zyklus.bis)}).</div>`;
             } else {
-                realTransactions.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id).forEach(t => {
+                aktuelleAbrechnungsBuchungen.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id).forEach(t => {
                     const item = document.createElement("div");
                     item.className = "item-card";
-
                     const prefix = t.type === "income" ? "+" : "-";
-                    const colorStyle = t.type === "income" ? "color: var(--success);" : "color: var(--danger);";
-
+                    const isZukunft = new Date(t.date) > heuteMitzternacht;
+                    
                     item.innerHTML = `
                         <div class="item-details">
-                            <span class="item-title">${t.description}</span>
+                            <span class="item-title">${t.description} ${isZukunft ? '<span class="badge-recurring" style="background:#fef3c7; color:#d97706;">Vorgemerkt</span>' : ''}</span>
                             <span class="item-sub">${formatDate(t.date)} • ${accountNames[t.account]} • ${t.category}</span>
                         </div>
                         <div class="item-right">
-                            <span class="item-amount" style="${colorStyle}">${prefix} ${formatCurrency(t.amount)}</span>
+                            <span class="item-amount" style="${t.type === 'income' ? 'color: var(--success);' : 'color: var(--danger);'}">${prefix} ${formatCurrency(t.amount)}</span>
                             <button class="btn-delete" data-id="${t.id}">×</button>
                         </div>
                     `;
@@ -736,59 +876,112 @@
             }
         }
 
+        // 6. NATIVE GRAFISCHE AUSWERTUNG RENDERN
+        renderCharts(aktuelleAbrechnungsBuchungen);
         checkBackupStatus();
+    }
+
+    // DIAGRAMM BERECHNUNG & GENERIERUNG (CSS-Balken)
+    function renderCharts(aktuelleBuchungen) {
+        if (!chartBoxContainer) return;
+        chartBoxContainer.innerHTML = "";
+
+        let gesamtEinnahmen = 0;
+        let gesamtAusgaben = 0;
+        const catTotals = {};
+
+        // Alle Ausgaben-Kategorien auf 0 initialisieren
+        categories.expense.forEach(c => catTotals[c] = 0);
+
+        aktuelleBuchungen.forEach(t => {
+            const amt = parseFloat(t.amount);
+            if (t.type === "income") {
+                gesamtEinnahmen += amt;
+            } else {
+                gesamtAusgaben += amt;
+                if (catTotals[t.category] !== undefined) {
+                    catTotals[t.category] += amt;
+                } else {
+                    catTotals[t.category] = amt;
+                }
+            }
+        });
+
+        // Höchsten Ausgabenwert ermitteln, um Prozentbalken zu skalieren
+        const maxAusgabe = Math.max(...Object.values(catTotals), 0);
+
+        // Diagramm-Titel / Balken generieren
+        Object.keys(catTotals).forEach(cat => {
+            const wert = catTotals[cat];
+            const prozent = maxAusgabe > 0 ? (wert / maxAusgabe) * 100 : 0;
+
+            if (wert > 0) { // Zeige nur Kategorien mit tatsächlichen Kosten
+                const row = document.createElement("div");
+                row.className = "chart-row";
+                row.innerHTML = `
+                    <div class="chart-label-row">
+                        <span>${cat}</span>
+                        <strong>${formatCurrency(wert)}</strong>
+                    </div>
+                    <div class="chart-bar-bg">
+                        <div class="chart-bar-fill" style="width: ${prozent}%; background-color: ${cat === 'Sparen/Anlage' ? '#10b981' : '#3b82f6'}"></div>
+                    </div>
+                `;
+                chartBoxContainer.appendChild(row);
+            }
+        });
+
+        if (chartBoxContainer.innerHTML === "") {
+            chartBoxContainer.innerHTML = "<div class='empty-state'>Noch keine Ausgabendaten im laufenden Zyklus vorhanden.</div>";
+        }
+
+        // Globale Monats-Kennzahlen drunter hängen
+        const statsRow = document.createElement("div");
+        statsRow.className = "chart-summary-stats";
+        statsRow.innerHTML = `
+            <div>
+                <span style="color:var(--text-muted); font-size:0.75rem; display:block;">Einnahmen gesamt:</span>
+                <span style="color:var(--success); font-weight:700;">${formatCurrency(gesamtEinnahmen)}</span>
+            </div>
+            <div>
+                <span style="color:var(--text-muted); font-size:0.75rem; display:block;">Ausgaben gesamt:</span>
+                <span style="color:var(--danger); font-weight:700;">${formatCurrency(gesamtAusgaben)}</span>
+            </div>
+            <div style="grid-column: span 2; padding-top:4px; border-top:1px solid #f1f5f9;">
+                <span style="color:var(--text-muted); font-size:0.75rem; display:block;">Sparquote im Gehaltsmonat:</span>
+                <span style="font-weight:700; color: ${gesamtEinnahmen >= gesamtAusgaben ? 'var(--primary)' : 'var(--danger)'}">
+                    ${gesamtEinnahmen > 0 ? Math.round(((gesamtEinnahmen - gesamtAusgaben) / gesamtEinnahmen) * 100) : 0} % Restbudget
+                </span>
+            </div>
+        `;
+        chartBoxContainer.appendChild(statsRow);
     }
 
     // EXPORT-LOGIK
     if (btnExportExcel) {
         btnExportExcel.addEventListener("click", () => {
-            if (typeof XLSX === "undefined") {
-                alert("Excel-Bibliothek lädt noch.");
-                return;
-            }
-
+            if (typeof XLSX === "undefined") return;
             const realTransactions = transactions.filter(t => !t.isTemplate);
-            const templateTransactions = transactions.filter(t => t.isTemplate);
-
-            if (realTransactions.length === 0 && templateTransactions.length === 0) {
-                alert("Keine Daten zum Exportieren vorhanden!");
-                return;
-            }
+            if (realTransactions.length === 0 && transactions.length === 0) return;
 
             const excelData = [["FINANZBERICHT - EXPORT"], ["Erstellt am:", new Date().toLocaleDateString('de-DE')], []];
+            excelData.push(["Typ", "Datum", "Konto", "Kategorie", "Beschreibung", "Betrag (€)"]);
             
-            const grouped = {};
             realTransactions.forEach(t => {
-                const monthKey = t.date ? t.date.substring(0, 7) : "Unbekannt";
-                if (!grouped[monthKey]) grouped[monthKey] = { income: [], expense: [] };
-                if (t.type === "income") grouped[monthKey].income.push(t); else grouped[monthKey].expense.push(t);
-            });
-
-            Object.keys(grouped).sort().forEach(month => {
-                excelData.push([`MONAT: ${month}`, "", "", ""]);
-                excelData.push(["Typ", "Datum", "Konto", "Kategorie", "Beschreibung", "Betrag (€)"]);
-                let incSum = 0, expSum = 0;
-                grouped[month].income.forEach(t => { excelData.push(["Einnahme", formatDate(t.date), accountNames[t.account], t.category, t.description, t.amount]); incSum += t.amount; });
-                grouped[month].expense.forEach(t => { excelData.push(["Ausgabe", formatDate(t.date), accountNames[t.account], t.category, t.description, t.amount]); expSum += t.amount; });
-                excelData.push(["", "", "", "", "Gesamte Einnahmen:", incSum]);
-                excelData.push(["", "", "", "", "Gesamte Ausgaben:", expSum]);
-                excelData.push(["", "", "", "", "Monats-Saldo:", incSum - expSum]);
-                excelData.push([]);
+                excelData.push([t.type === "income" ? "Einnahme" : "Ausgabe", formatDate(t.date), accountNames[t.account], t.category, t.description, t.amount]);
             });
 
             const workbook = XLSX.utils.book_new();
             const mainSheet = XLSX.utils.aoa_to_sheet(excelData);
-            XLSX.utils.book_append_sheet(workbook, mainSheet, "Verlauf & Prognose");
+            XLSX.utils.book_append_sheet(workbook, mainSheet, "Verlauf");
 
             const systemData = [["ID", "Type", "Amount", "Account", "Category", "Date", "Description", "IsTemplate", "Interval"]];
             transactions.forEach(t => {
                 systemData.push([t.id, t.type, t.amount, accountNames[t.account], t.category, t.date, t.description, t.isTemplate ? "JA" : "NEIN", t.interval || "1"]);
             });
-            const sysSheet = XLSX.utils.aoa_to_sheet(systemData);
-            XLSX.utils.book_append_sheet(workbook, sysSheet, "APP_SYSTEM_BACKUP");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(systemData), "APP_SYSTEM_BACKUP");
 
-            const timeStamp = new Date().toISOString().slice(0,10);
-            XLSX.writeFile(workbook, `Finanzexport_${timeStamp}.xlsx`);
+            XLSX.writeFile(workbook, `Finanzexport_${new Date().toISOString().slice(0,10)}.xlsx`);
             localStorage.setItem("mob_budget_last_backup", Date.now().toString());
             updateUI();
         });
@@ -797,61 +990,36 @@
     // IMPORT LOGIK
     if (btnTriggerFile && excelFileInput) {
         btnTriggerFile.addEventListener("click", () => excelFileInput.click());
-        
         excelFileInput.addEventListener("change", (e) => {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = (evt) => {
                 try {
                     const data = new Uint8Array(evt.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    if (!workbook.SheetNames.includes("APP_SYSTEM_BACKUP")) {
-                        alert("Fehler: Diese Excel-Datei enthält kein gültiges App-System-Backup.");
-                        return;
-                    }
+                    if (!workbook.SheetNames.includes("APP_SYSTEM_BACKUP")) return;
 
-                    const worksheet = workbook.Sheets["APP_SYSTEM_BACKUP"];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets["APP_SYSTEM_BACKUP"], { header: 1 });
                     const importedTransactions = [];
                     for(let i = 1; i < jsonData.length; i++) {
                         const row = jsonData[i];
                         if (!row || row.length < 7) continue;
-
                         let rawDate = row[5];
-                        if (typeof rawDate === "number") {
-                            rawDate = new Date(Date.UTC(0, 0, rawDate - 1)).toISOString().slice(0, 10);
-                        }
+                        if (typeof rawDate === "number") rawDate = new Date(Date.UTC(0, 0, rawDate - 1)).toISOString().slice(0, 10);
 
                         importedTransactions.push({
-                            id: Number(row[0]) || Date.now() + i,
-                            type: row[1] === "income" ? "income" : "expense",
-                            amount: parseFloat(row[2]) || 0,
-                            account: accountKeys[row[3]] || "giro",
-                            category: row[4] || "Sonstiges",
-                            date: rawDate || new Date().toISOString().slice(0, 10),
-                            description: String(row[6] || ""),
-                            isTemplate: row[7] === "JA",
-                            interval: row[8] ? String(row[8]) : "1"
+                            id: Number(row[0]), type: row[1] === "income" ? "income" : "expense", amount: parseFloat(row[2]),
+                            account: accountKeys[row[3]] || "giro", category: row[4], date: rawDate, description: String(row[6]),
+                            isTemplate: row[7] === "JA", interval: String(row[8] || "1")
                         });
                     }
-
-                    if (importedTransactions.length > 0) {
-                        if (confirm(`Möchtest du die ${importedTransactions.length} importierten Buchungen laden? Deine aktuellen App-Daten werden dabei überschrieben.`)) {
-                            transactions = importedTransactions;
-                            localStorage.setItem("mob_budget_trans_v3", JSON.stringify(transactions));
-                            alert("Backup erfolgreich wiederhergestellt!");
-                            updateUI();
-                        }
-                    } else {
-                        alert("Es wurden keine gültigen Buchungsdaten in der Datei gefunden.");
+                    if (importedTransactions.length > 0 && confirm("Backup laden und bestehende Daten überschreiben?")) {
+                        transactions = importedTransactions;
+                        localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
+                        updateUI();
                     }
-                } catch (err) {
-                    alert("Fehler beim Lesen der Excel-Datei: " + err.message);
-                }
+                } catch (err) { alert("Fehler: " + err.message); }
                 excelFileInput.value = "";
             };
             reader.readAsArrayBuffer(file);
@@ -873,104 +1041,77 @@
             const isTemplate = isRecurringCheckbox.checked;
             const currentCatSelect = document.getElementById("category");
 
-            const newTransaction = {
-                id: Number(Date.now()),
-                type: currentType,
-                amount: parseFloat(amountInput.value),
-                account: accountSelect.value,
-                category: currentCatSelect ? currentCatSelect.value : "Sonstiges",
-                date: dateInput.value, 
-                description: descInput.value.trim(),
-                isTemplate: isTemplate,
-                interval: isTemplate ? intervalSelect.value : "1"
-            };
+            transactions.push({
+                id: Number(Date.now()), type: currentType, amount: parseFloat(amountInput.value),
+                account: accountSelect.value, category: currentCatSelect ? currentCatSelect.value : "Sonstiges",
+                date: dateInput.value, description: descInput.value.trim(), isTemplate: isTemplate, interval: isTemplate ? intervalSelect.value : "1"
+            });
+            localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
 
-            transactions.push(newTransaction);
-            localStorage.setItem("mob_budget_trans_v3", JSON.stringify(transactions));
-
-            amountInput.value = "";
-            descInput.value = "";
-            isRecurringCheckbox.checked = false;
-            intervalGroup.style.display = "none";
-            setTodayDate();
-
-            updateUI();
+            amountInput.value = ""; descInput.value = ""; isRecurringCheckbox.checked = false;
+            intervalGroup.style.display = "none"; setTodayDate(); updateUI();
         });
     }
 
     document.addEventListener("click", (e) => {
         if (e.target.classList.contains("btn-delete")) {
-            const idToDelete = Number(e.target.dataset.id);
-            transactions = transactions.filter(t => Number(t.id) !== idToDelete);
-            localStorage.setItem("mob_budget_trans_v3", JSON.stringify(transactions));
+            transactions = transactions.filter(t => Number(t.id) !== Number(e.target.dataset.id));
+            localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
             updateUI();
         }
     });
 
     if (btnRunRecurring) {
         btnRunRecurring.addEventListener("click", () => {
-            const heute = new Date();
-            const currentYear = heute.getFullYear();
-            const currentMonth = heute.getMonth();
-            const currentYearMonthStr = heute.toISOString().slice(0, 7);
-            
+            const zyklus = getAktuellerAbrechnungsZeitraum();
             const templates = transactions.filter(t => t.isTemplate);
-            
-            // Filtert nur die Daueraufträge, die DIESEN Monat laut Intervall fällig sind
-            const faelligeTemplates = templates.filter(tmpl => isTemplateDueInMonth(tmpl, currentYear, currentMonth));
+            const realTransactions = transactions.filter(t => !t.isTemplate);
 
-            if (faelligeTemplates.length === 0) {
-                alert("Keine fälligen Daueraufträge für diesen Monat gefunden!");
-                return;
-            }
+            const faelligeTemplates = templates.filter(tmpl => {
+                const tTag = parseInt(getDayFromDate(tmpl.date));
+                let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
+                if (checkDate < zyklus.von) checkDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
+                
+                if (checkDate >= zyklus.von && checkDate <= zyklus.bis) {
+                    const bereitsGebucht = realTransactions.some(rt => 
+                        rt.description.includes(tmpl.description) && new Date(rt.date) >= zyklus.von && new Date(rt.date) <= zyklus.bis
+                    );
+                    return !bereitsGebucht;
+                }
+                return false;
+            });
 
             const newBookings = faelligeTemplates.map((tmpl, index) => {
-                const templateDay = getDayFromDate(tmpl.date);
-                const targetDateStr = `${currentYearMonthStr}-${templateDay}`;
+                const tTag = parseInt(getDayFromDate(tmpl.date));
+                let targetDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
+                if (targetDate < zyklus.von) targetDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
 
                 return {
-                    id: Number(Date.now() + index + Math.floor(Math.random() * 100)),
-                    type: tmpl.type,
-                    amount: tmpl.amount,
-                    account: tmpl.account,
-                    category: tmpl.category,
-                    date: targetDateStr,
-                    description: `[Abo] ${tmpl.description}`,
-                    isTemplate: false
+                    id: Number(Date.now() + index), type: tmpl.type, amount: tmpl.amount, account: tmpl.account,
+                    category: tmpl.category, date: targetDate.toISOString().slice(0, 10), description: `[Abo] ${tmpl.description}`, isTemplate: false
                 };
             });
 
             transactions = [...transactions, ...newBookings];
-            localStorage.setItem("mob_budget_trans_v3", JSON.stringify(transactions));
-            
-            const monatsName = heute.toLocaleDateString('de-DE', { month: 'long' });
-            alert(`${newBookings.length} regelmäßige Buchung(en) wurden erfolgreich für den Monat ${monatsName} verbucht!`);
+            localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
+            alert(`${newBookings.length} Dauerauftrag/-aufträge für den laufenden Abrechnungsmonat verbucht!`);
             updateUI();
         });
     }
 
-    // INLINE SERVICE WORKER REGISTRIERUNG FÜR PWA INSTALLATION
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             const swCode = `
                 self.addEventListener('install', (e) => self.skipWaiting());
                 self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
-                self.addEventListener('fetch', (e) => {
-                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-                });
+                self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
             `;
             const blob = new Blob([swCode], {type: 'application/javascript'});
-            const swURL = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swURL).catch(err => console.log("SW Error", err));
+            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
         });
     }
 
-    function initApp() {
-        setTodayDate();
-        updateCategoryOptions();
-        updateUI();
-    }
-
+    function initApp() { setTodayDate(); updateCategoryOptions(); updateUI(); }
     initApp();
 </script>
 
