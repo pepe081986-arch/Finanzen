@@ -519,14 +519,22 @@
         }
         if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(projectedSavings)}`;
 
-        // Daueraufträge-Liste rendern
+       // Daueraufträge-Liste rendern (Aufgeteilt in Einnahmen und Ausgaben)
         if (recurringListSection) {
             if (templates.length > 0) {
                 recurringListSection.style.display = "block";
-                templates.sort((a, b) => b.id - a.id).forEach(t => {
+                recurringListEl.innerHTML = ""; // Liste leeren
+
+                // Templates in Einnahmen und Ausgaben trennen und chronologisch sortieren
+                const incomeTemplates = templates.filter(t => t.type === "income").sort((a, b) => b.id - a.id);
+                const expenseTemplates = templates.filter(t => t.type === "expense").sort((a, b) => b.id - a.id);
+
+                // Hilfsfunktion zum Erstellen der Karten
+                const createTemplateCard = (t) => {
                     const item = document.createElement("div");
                     item.className = "item-card";
-                    item.style.borderLeft = "4px solid var(--primary)";
+                    // Einnahmen bekommen einen grünen Balken, Ausgaben einen blauen/Standard-Balken
+                    item.style.borderLeft = t.type === "income" ? "4px solid var(--success)" : "4px solid var(--primary)";
                     item.style.background = "#f8fafc";
                     const prefix = t.type === "income" ? "+" : "-";
                     item.innerHTML = `
@@ -539,8 +547,15 @@
                             <button class="btn-delete" data-id="${t.id}">×</button>
                         </div>
                     `;
-                    recurringListEl.appendChild(item);
-                });
+                    return item;
+                };
+
+                // 1. Zuerst alle Einnahmen-Daueraufträge anhängen
+                incomeTemplates.forEach(t => recurringListEl.appendChild(createTemplateCard(t)));
+
+                // 2. Danach alle Ausgaben-Daueraufträge anhängen
+                expenseTemplates.forEach(t => recurringListEl.appendChild(createTemplateCard(t)));
+
             } else {
                 recurringListSection.style.display = "none";
             }
