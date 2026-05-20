@@ -978,18 +978,35 @@
         }
     });
 
-    // VOLLAUTOMATISCHER BACKGROUND RUNNER FÜR DAUERAUFTRÄGE
+    // VOLLAUTOMATISCHER BACKGROUND RUNNER FÜR DAUERAUFTRÄGE (MIT HEUTE-SCHUTZ)
     function autoRunRecurring() {
         const zyklus = getAktuellerAbrechnungsZeitraum();
         const templates = transactions.filter(t => t.isTemplate);
         const realTransactions = transactions.filter(t => !t.isTemplate);
 
+        const heuteMitzternacht = new Date();
+        heuteMitzternacht.setHours(0,0,0,0);
+
         const faelligeTemplates = templates.filter(tmpl => {
             const tTag = parseInt(getDayFromDate(tmpl.date));
+            
+            // Fiktives Fälligkeitsdatum in diesem Abrechnungsfenster bestimmen
             let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
             if (checkDate < zyklus.von) checkDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
+            checkDate.setHours(0,0,0,0);
             
+            // Erstes Startdatum des Dauerauftrags prüfen (Dauerauftrag darf nicht in der Zukunft starten)
+            const startDate = new Date(tmpl.date);
+            startDate.setHours(0,0,0,0);
+            if (checkDate < startDate) return false;
+
+            // --- DER HEUTE-SCHUTZ ---
+            // Liegt das Berechnungsdatum vor dem heutigen Tag? Dann NICHT buchen (ist schon im Startguthaben drin!)
+            if (checkDate < heuteMitzternacht) return false;
+
+            // Liegt der Stichtag im aktuellen Abrechnungszyklus?
             if (checkDate >= zyklus.von && checkDate <= zyklus.bis) {
+                // Prüfen, ob für diesen Zeitraum bereits gebucht wurde
                 const bereitsGebucht = realTransactions.some(rt => 
                     rt.description.includes(tmpl.description) && 
                     new Date(rt.date) >= zyklus.von && 
@@ -1007,8 +1024,14 @@
                 if (targetDate < zyklus.von) targetDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
 
                 return {
-                    id: Number(Date.now() + index), type: tmpl.type, amount: tmpl.amount, account: tmpl.account,
-                    category: tmpl.category, date: targetDate.toISOString().slice(0, 10), description: `[Abo] ${tmpl.description}`, isTemplate: false
+                    id: Number(Date.now() + index), 
+                    type: tmpl.type, 
+                    amount: tmpl.amount, 
+                    account: tmpl.account,
+                    category: tmpl.category, 
+                    date: targetDate.toISOString().slice(0, 10), 
+                    description: `[Abo] ${tmpl.description}`, 
+                    isTemplate: false
                 };
             });
 
