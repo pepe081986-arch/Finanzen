@@ -260,7 +260,7 @@
             background-color: var(--primary-hover);
         }
 
-        /* NEUES BUTTON-LAYOUT (OPTIMIERT NACH WUNSCH) */
+        /* Action Grid Buttons */
         .action-grid {
             display: flex;
             flex-direction: column;
@@ -425,16 +425,6 @@
             border: none;
         }
 
-        .btn-trigger-recurring {
-            background: #ecfdf5;
-            color: #047857;
-            font-size: 0.8rem;
-            padding: 6px 12px;
-            border-radius: 6px;
-            width: auto;
-            white-space: nowrap;
-        }
-
         .empty-state {
             text-align: center;
             color: var(--text-muted);
@@ -481,8 +471,7 @@
 
     <div class="section" id="charts-section" style="display: none;">
         <h2>Kategorien & Auswertung</h2>
-        <div class="chart-box" id="chart-box-container">
-            </div>
+        <div class="chart-box" id="chart-box-container"></div>
     </div>
 
     <div class="section">
@@ -553,6 +542,7 @@
 </div>
 
 <script>
+    // STARTBETRÄGE WIEDER KORREKT HINTERLEGT!
     const initialBalances = {
         giro: 2444.11,
         sparen: 400.00
@@ -567,58 +557,46 @@
         income: ["Gehalt", "Zinsen", "Geschenk", "Sonstiges"]
     };
 
-    // Statische Liste deutscher Feiertage (Bundeseinheitlich + NRW da relevant)
     function istFeiertagOderWochenende(date) {
         const d = new Date(date);
         const day = d.getDay();
-        if (day === 0 || day === 6) return true; // Wochenende
-
+        if (day === 0 || day === 6) return true;
         const m = d.getMonth() + 1;
         const tag = d.getDate();
-        
-        // Feste Feiertage
-        if (m === 1 && tag === 1) return true;   // Neujahr
-        if (m === 5 && tag === 1) return true;   // 1. Mai
-        if (m === 10 && tag === 3) return true;  // Tag d. dt. Einheit
-        if (m === 11 && tag === 1) return true;  // Allerheiligen
-        if (m === 12 && tag === 25) return true; // 1. Weihnachtstag
-        if (m === 12 && tag === 26) return true; // 2. Weihnachtstag
-        
+        if (m === 1 && tag === 1) return true;
+        if (m === 5 && tag === 1) return true;
+        if (m === 10 && tag === 3) return true;
+        if (m === 11 && tag === 1) return true;
+        if (m === 12 && tag === 25) return true;
+        if (m === 12 && tag === 26) return true;
         return false;
     }
 
-    // INTELLIGENTE GEHALTS-DATUMS-BERECHNUNG (Werktag-Regel)
     function getEchtesGehaltsDatum(jahr, monat) {
         let gDate = new Date(jahr, monat, 16);
         while (istFeiertagOderWochenende(gDate)) {
-            gDate.setDate(gDate.getDate() - 1); // Solange einen Tag zurückgehen, bis es ein Werktag ist
+            gDate.setDate(gDate.getDate() - 1);
         }
         gDate.setHours(0,0,0,0);
         return gDate;
     }
 
-    // Bestimmt den aktuellen Gehalts-Zeitraum (Abrechnungsmonat) basierend auf dem heutigen Kalendertag
     function getAktuellerAbrechnungsZeitraum() {
         const heute = new Date();
         heute.setHours(0,0,0,0);
-        
         let zielMonat = heute.getMonth();
         let zielJahr = heute.getFullYear();
-        
         let gehaltDiesenMonat = getEchtesGehaltsDatum(zielJahr, zielMonat);
-        
         let von, bis;
         
         if (heute >= gehaltDiesenMonat) {
-            // Wir sind im laufenden Gehaltsmonat (z.B. ab 16. Mai) -> geht bis vor dem Gehalt im Juni
             von = gehaltDiesenMonat;
             let naechsterMonat = zielMonat + 1;
             let naechstesJahr = zielJahr;
             if (naechsterMonat > 11) { naechsterMonat = 0; naechstesJahr++; }
             bis = new Date(getEchtesGehaltsDatum(naechstesJahr, naechsterMonat));
-            bis.setDate(bis.getDate() - 1); // Bis einen Tag vor dem nächsten Gehalt
+            bis.setDate(bis.getDate() - 1);
         } else {
-            // Wir sind vor dem 16. (z.B. 10. Mai) -> Gehaltsmonat startete im April
             let vorigerMonat = zielMonat - 1;
             let vorigesJahr = zielJahr;
             if (vorigerMonat < 0) { vorigerMonat = 11; vorigesJahr--; }
@@ -626,7 +604,6 @@
             bis = new Date(gehaltDiesenMonat);
             bis.setDate(bis.getDate() - 1);
         }
-        
         von.setHours(0,0,0,0);
         bis.setHours(23,59,59,999);
         return { von, bis };
@@ -647,18 +624,13 @@
     const transactionList = document.getElementById("transaction-list");
     const recurringListEl = document.getElementById("recurring-list");
     const recurringListSection = document.getElementById("recurring-list-section");
-    const recurringSection = document.getElementById("recurring-trigger-section");
-    const recurringTriggerTitle = document.getElementById("recurring-trigger-title");
-    const btnRunRecurring = document.getElementById("btn-run-recurring");
-    const btnExportExcel = document.getElementById("btn-export-excel");
-    const btnTriggerFile = document.getElementById("btn-trigger-file");
-    const excelFileInput = document.getElementById("excel-file-input");
     const backupBanner = document.getElementById("backup-alert-banner");
-    
-    // Chart UI Elemente
     const btnToggleCharts = document.getElementById("btn-toggle-charts");
     const chartsSection = document.getElementById("charts-section");
     const chartBoxContainer = document.getElementById("chart-box-container");
+    const btnExportExcel = document.getElementById("btn-export-excel");
+    const btnTriggerFile = document.getElementById("btn-trigger-file");
+    const excelFileInput = document.getElementById("excel-file-input");
 
     if (isRecurringCheckbox) {
         isRecurringCheckbox.addEventListener("change", (e) => {
@@ -738,14 +710,12 @@
         const heuteMitzternacht = new Date();
         heuteMitzternacht.setHours(0,0,0,0);
 
-        // Gehaltszyklus ermitteln
         const zyklus = getAktuellerAbrechnungsZeitraum();
         const displayCycleEl = document.getElementById("display-cycle-dates");
         if (displayCycleEl) {
             displayCycleEl.textContent = `Abrechnungszeitraum: ${formatDate(zyklus.von)} - ${formatDate(zyklus.bis)}`;
         }
 
-        // 1. KONTOSTAND: Nur Buchungen berechnen, die in der Vergangenheit oder HEUTE liegen
         realTransactions.forEach(t => {
             const amt = parseFloat(t.amount);
             const bDate = new Date(t.date);
@@ -763,7 +733,6 @@
         if (displayGiroEl) displayGiroEl.textContent = formatCurrency(balances.giro);
         if (displaySparenEl) displaySparenEl.textContent = formatCurrency(balances.sparen);
 
-        // 2. PROGNOSE (Rein auf Basis geplanter Daueraufträge des Sparkontos)
         let projectedSavings = balances.sparen;
         const heute = new Date();
         
@@ -781,33 +750,6 @@
         }
         if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(projectedSavings)}`;
 
-        // 3. DAUERAUFTRÄGE FÜR DIESEN AKTUELLEN GEHALTSMONAT PRÜFEN
-        // Ein Dauerauftrag ist fällig, wenn sein Tag innerhalb des Zyklus liegt und noch nicht gebucht wurde
-        const faelligeTemplates = templates.filter(tmpl => {
-            const tTag = parseInt(getDayFromDate(tmpl.date));
-            // Wir bauen ein fiktives Fälligkeitsdatum im aktuellen Abrechnungsfenster
-            let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
-            if (checkDate < zyklus.von) {
-                checkDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
-            }
-            
-            // Liegt der Stichtag im Zyklus?
-            if (checkDate >= zyklus.von && checkDate <= zyklus.bis) {
-                // Prüfen ob bereits eine Buchung mit "[Abo]" Kennung existiert
-                const bereitsGebucht = realTransactions.some(rt => 
-                    rt.description.includes(tmpl.description) && 
-                    new Date(rt.date) >= zyklus.von && 
-                    new Date(rt.date) <= zyklus.bis
-                );
-                return !bereitsGebucht;
-            }
-            return false;
-        });
-
-        if (recurringSection) recurringSection.style.display = faelligeTemplates.length > 0 ? "block" : "none";
-        if (recurringTriggerTitle) recurringTriggerTitle.textContent = "Fällige Daueraufträge verbuchen";
-
-        // 4. DAUERAUFTRÄGE AUFLISTEN
         if (recurringListSection) {
             if (templates.length > 0) {
                 recurringListSection.style.display = "block";
@@ -834,8 +776,6 @@
             }
         }
 
-        // 5. BUCHUNGSVERLAUF (NUR LAUFENDER GEHALTSMONAT)
-        // Zeigt alle Buchungen an, die zeitlich in den aktuellen Zyklus gehören (auch zukünftige dieses Monats)
         const aktuelleAbrechnungsBuchungen = realTransactions.filter(t => {
             const bDate = new Date(t.date);
             return bDate >= zyklus.von && bDate <= zyklus.bis;
@@ -866,12 +806,10 @@
             }
         }
 
-        // 6. NATIVE GRAFISCHE AUSWERTUNG RENDERN
         renderCharts(aktuelleAbrechnungsBuchungen);
         checkBackupStatus();
     }
 
-    // DIAGRAMM BERECHNUNG & GENERIERUNG (CSS-Balken)
     function renderCharts(aktuelleBuchungen) {
         if (!chartBoxContainer) return;
         chartBoxContainer.innerHTML = "";
@@ -880,7 +818,6 @@
         let gesamtAusgaben = 0;
         const catTotals = {};
 
-        // Alle Ausgaben-Kategorien auf 0 initialisieren
         categories.expense.forEach(c => catTotals[c] = 0);
 
         aktuelleBuchungen.forEach(t => {
@@ -889,23 +826,17 @@
                 gesamtEinnahmen += amt;
             } else {
                 gesamtAusgaben += amt;
-                if (catTotals[t.category] !== undefined) {
-                    catTotals[t.category] += amt;
-                } else {
-                    catTotals[t.category] = amt;
-                }
+                if (catTotals[t.category] !== undefined) catTotals[t.category] += amt;
             }
         });
 
-        // Höchsten Ausgabenwert ermitteln, um Prozentbalken zu skalieren
         const maxAusgabe = Math.max(...Object.values(catTotals), 0);
 
-        // Diagramm-Titel / Balken generieren
         Object.keys(catTotals).forEach(cat => {
             const wert = catTotals[cat];
             const prozent = maxAusgabe > 0 ? (wert / maxAusgabe) * 100 : 0;
 
-            if (wert > 0) { // Zeige nur Kategorien mit tatsächlichen Kosten
+            if (wert > 0) {
                 const row = document.createElement("div");
                 row.className = "chart-row";
                 row.innerHTML = `
@@ -925,7 +856,6 @@
             chartBoxContainer.innerHTML = "<div class='empty-state'>Noch keine Ausgabendaten im laufenden Zyklus vorhanden.</div>";
         }
 
-        // Globale Monats-Kennzahlen drunter hängen
         const statsRow = document.createElement("div");
         statsRow.className = "chart-summary-stats";
         statsRow.innerHTML = `
@@ -947,7 +877,6 @@
         chartBoxContainer.appendChild(statsRow);
     }
 
-    // EXPORT-LOGIK
     if (btnExportExcel) {
         btnExportExcel.addEventListener("click", () => {
             if (typeof XLSX === "undefined") return;
@@ -962,8 +891,7 @@
             });
 
             const workbook = XLSX.utils.book_new();
-            const mainSheet = XLSX.utils.aoa_to_sheet(excelData);
-            XLSX.utils.book_append_sheet(workbook, mainSheet, "Verlauf");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(excelData), "Verlauf");
 
             const systemData = [["ID", "Type", "Amount", "Account", "Category", "Date", "Description", "IsTemplate", "Interval"]];
             transactions.forEach(t => {
@@ -977,7 +905,6 @@
         });
     }
 
-    // IMPORT LOGIK
     if (btnTriggerFile && excelFileInput) {
         btnTriggerFile.addEventListener("click", () => excelFileInput.click());
         excelFileInput.addEventListener("change", (e) => {
@@ -1051,62 +978,12 @@
         }
     });
 
-    if (btnRunRecurring) {
-        btnRunRecurring.addEventListener("click", () => {
-            const zyklus = getAktuellerAbrechnungsZeitraum();
-            const templates = transactions.filter(t => t.isTemplate);
-            const realTransactions = transactions.filter(t => !t.isTemplate);
-
-            const faelligeTemplates = templates.filter(tmpl => {
-                const tTag = parseInt(getDayFromDate(tmpl.date));
-                let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
-                if (checkDate < zyklus.von) checkDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
-                
-                if (checkDate >= zyklus.von && checkDate <= zyklus.bis) {
-                    const bereitsGebucht = realTransactions.some(rt => 
-                        rt.description.includes(tmpl.description) && new Date(rt.date) >= zyklus.von && new Date(rt.date) <= zyklus.bis
-                    );
-                    return !bereitsGebucht;
-                }
-                return false;
-            });
-
-            const newBookings = faelligeTemplates.map((tmpl, index) => {
-                const tTag = parseInt(getDayFromDate(tmpl.date));
-                let targetDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
-                if (targetDate < zyklus.von) targetDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
-
-                return {
-                    id: Number(Date.now() + index), type: tmpl.type, amount: tmpl.amount, account: tmpl.account,
-                    category: tmpl.category, date: targetDate.toISOString().slice(0, 10), description: `[Abo] ${tmpl.description}`, isTemplate: false
-                };
-            });
-
-            transactions = [...transactions, ...newBookings];
-            localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
-            alert(`${newBookings.length} Dauerauftrag/-aufträge für den laufenden Abrechnungsmonat verbucht!`);
-            updateUI();
-        });
-    }
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            const swCode = `
-                self.addEventListener('install', (e) => self.skipWaiting());
-                self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
-                self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
-            `;
-            const blob = new Blob([swCode], {type: 'application/javascript'});
-            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
-        });
-    }
-
+    // VOLLAUTOMATISCHER BACKGROUND RUNNER FÜR DAUERAUFTRÄGE
     function autoRunRecurring() {
         const zyklus = getAktuellerAbrechnungsZeitraum();
         const templates = transactions.filter(t => t.isTemplate);
         const realTransactions = transactions.filter(t => !t.isTemplate);
 
-        // Prüfen, welche Daueraufträge in diesem Gehaltsmonat fällig und noch ungebucht sind
         const faelligeTemplates = templates.filter(tmpl => {
             const tTag = parseInt(getDayFromDate(tmpl.date));
             let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
@@ -1130,14 +1007,8 @@
                 if (targetDate < zyklus.von) targetDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
 
                 return {
-                    id: Number(Date.now() + index),
-                    type: tmpl.type,
-                    amount: tmpl.amount,
-                    account: tmpl.account,
-                    category: tmpl.category,
-                    date: targetDate.toISOString().slice(0, 10),
-                    description: `[Abo] ${tmpl.description}`,
-                    isTemplate: false
+                    id: Number(Date.now() + index), type: tmpl.type, amount: tmpl.amount, account: tmpl.account,
+                    category: tmpl.category, date: targetDate.toISOString().slice(0, 10), description: `[Abo] ${tmpl.description}`, isTemplate: false
                 };
             });
 
@@ -1146,12 +1017,25 @@
         }
     }
 
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            const swCode = `
+                self.addEventListener('install', (e) => self.skipWaiting());
+                self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
+                self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+            `;
+            const blob = new Blob([swCode], {type: 'application/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+        });
+    }
+
     function initApp() { 
         setTodayDate(); 
         updateCategoryOptions(); 
-        autoRunRecurring(); // Bucht fällige Daueraufträge ab jetzt vollautomatisch im Hintergrund!
+        autoRunRecurring(); // Automatisches Buchen aktivieren
         updateUI(); 
     }
+    initApp();
 </script>
 
 </body>
