@@ -485,16 +485,6 @@
             </div>
     </div>
 
-    <div class="section" id="recurring-trigger-section" style="display: none;">
-        <div class="item-card" style="background: #f0fdf4; border-color: #bbf7d0;">
-            <div class="item-details">
-                <span class="item-title" style="color: #166534;" id="recurring-trigger-title">Regelmäßige Buchungen</span>
-                <span class="item-sub">Fügt alle fälligen Daueraufträge als echte Buchungen hinzu.</span>
-            </div>
-            <button class="btn-trigger-recurring" id="btn-run-recurring">Jetzt buchen</button>
-        </div>
-    </div>
-
     <div class="section">
         <h2>Neue Transaktion</h2>
         <form id="transaction-form">
@@ -1111,8 +1101,57 @@
         });
     }
 
-    function initApp() { setTodayDate(); updateCategoryOptions(); updateUI(); }
-    initApp();
+    function autoRunRecurring() {
+        const zyklus = getAktuellerAbrechnungsZeitraum();
+        const templates = transactions.filter(t => t.isTemplate);
+        const realTransactions = transactions.filter(t => !t.isTemplate);
+
+        // Prüfen, welche Daueraufträge in diesem Gehaltsmonat fällig und noch ungebucht sind
+        const faelligeTemplates = templates.filter(tmpl => {
+            const tTag = parseInt(getDayFromDate(tmpl.date));
+            let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
+            if (checkDate < zyklus.von) checkDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
+            
+            if (checkDate >= zyklus.von && checkDate <= zyklus.bis) {
+                const bereitsGebucht = realTransactions.some(rt => 
+                    rt.description.includes(tmpl.description) && 
+                    new Date(rt.date) >= zyklus.von && 
+                    new Date(rt.date) <= zyklus.bis
+                );
+                return !bereitsGebucht;
+            }
+            return false;
+        });
+
+        if (faelligeTemplates.length > 0) {
+            const newBookings = faelligeTemplates.map((tmpl, index) => {
+                const tTag = parseInt(getDayFromDate(tmpl.date));
+                let targetDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
+                if (targetDate < zyklus.von) targetDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
+
+                return {
+                    id: Number(Date.now() + index),
+                    type: tmpl.type,
+                    amount: tmpl.amount,
+                    account: tmpl.account,
+                    category: tmpl.category,
+                    date: targetDate.toISOString().slice(0, 10),
+                    description: `[Abo] ${tmpl.description}`,
+                    isTemplate: false
+                };
+            });
+
+            transactions = [...transactions, ...newBookings];
+            localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
+        }
+    }
+
+    function initApp() { 
+        setTodayDate(); 
+        updateCategoryOptions(); 
+        autoRunRecurring(); // Bucht fällige Daueraufträge ab jetzt vollautomatisch im Hintergrund!
+        updateUI(); 
+    }
 </script>
 
 </body>
