@@ -14,30 +14,20 @@
     <script>
         (function() {
             const repoURL = window.location.href.split('?')[0].split('#')[0];
-            
             const manifest = {
                 "short_name": "Finanzen",
                 "name": "Finanz-Manager Mobil",
-                "icons": [
-                    {
-                        "src": repoURL + "Logo.png",
-                        "type": "image/png",
-                        "sizes": "512x512",
-                        "purpose": "any maskable"
-                    }
-                ],
+                "icons": [{ "src": repoURL + "Logo.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }],
                 "start_url": repoURL,
                 "background_color": "#f8fafc",
                 "theme_color": "#1e293b",
                 "display": "standalone",
                 "orientation": "portrait"
             };
-            const stringManifest = JSON.stringify(manifest);
-            const blob = new Blob([stringManifest], {type: 'application/json'});
-            const manifestURL = URL.createObjectURL(blob);
+            const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
             const link = document.createElement('link');
             link.rel = 'manifest';
-            link.href = manifestURL;
+            link.href = URL.createObjectURL(blob);
             document.head.appendChild(link);
         })();
     </script>
@@ -74,22 +64,10 @@
             font-size: 15px;
         }
 
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
-        header {
-            margin-bottom: 15px;
-            text-align: center;
-            padding-top: 10px;
-        }
-
-        h1 {
-            font-size: 1.5rem;
-            color: #0f172a;
-        }
-
+        .container { max-width: 500px; margin: 0 auto; }
+        header { margin-bottom: 15px; text-align: center; padding-top: 10px; }
+        h1 { font-size: 1.5rem; color: #0f172a; }
+        
         h2 {
             font-size: 1.15rem;
             margin-bottom: 12px;
@@ -99,18 +77,23 @@
             justify-content: space-between;
         }
 
-        .section {
-            margin-bottom: 24px;
+        .collapsible-header {
+            cursor: pointer;
+            user-select: none;
+            padding: 4px 0;
+        }
+        .collapsible-header .arrow {
+            font-size: 0.9rem;
+            transition: transform 0.2s;
+            color: var(--text-muted);
+        }
+        .collapsible-header.collapsed .arrow {
+            transform: rotate(-90deg);
         }
 
-        /* Dashboard */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
+        .section { margin-bottom: 24px; }
+        .dashboard { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px; }
+        
         .card {
             background: var(--card-bg);
             padding: 16px;
@@ -118,322 +101,82 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             border: 1px solid var(--border-color);
         }
+        .card.highlight { background: linear-gradient(135deg, #1e293b, #334155); color: white; border: none; }
+        .card h3 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; color: var(--text-muted); }
+        .card.highlight h3 { color: #94a3b8; }
+        .balance { font-size: 1.5rem; font-weight: 700; }
+        .prognosis-text { font-size: 0.85rem; margin-top: 6px; color: #059669; font-weight: 500; }
+        .cycle-info { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-style: italic; }
 
-        .card.highlight {
-            background: linear-gradient(135deg, #1e293b, #334155);
-            color: white;
-            border: none;
-        }
-
-        .card h3 {
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 6px;
-            color: var(--text-muted);
-        }
-
-        .card.highlight h3 {
-            color: #94a3b8;
-        }
-
-        .balance {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .prognosis-text {
-            font-size: 0.85rem;
-            margin-top: 6px;
-            color: #059669;
-            font-weight: 500;
-        }
-
-        .cycle-info {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-            font-style: italic;
-        }
-
-        /* Backup Hinweis-Banner */
         .backup-banner {
-            background-color: #fffbeb;
-            border: 1px solid #fde68a;
-            color: #b45309;
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 0.85rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 500;
+            background-color: #fffbeb; border: 1px solid #fde68a; color: #b45309;
+            padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;
+            font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; font-weight: 500;
         }
 
-        /* Formular Styling */
-        form {
-            background: var(--card-bg);
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
+        form { background: var(--card-bg); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; color: #475569; }
+        
+        .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .type-btn { padding: 10px; border: 1px solid var(--border-color); background: var(--bg-color); cursor: pointer; border-radius: 8px; font-weight: 600; text-align: center; font-size: 0.9rem; }
+        .type-btn.active[data-type="expense"] { background: var(--danger); color: white; border-color: var(--danger); }
+        .type-btn.active[data-type="income"] { background: var(--success); color: white; border-color: var(--success); }
 
-        .form-group {
-            margin-bottom: 12px;
+        .filter-toggle-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 10px;
         }
-
-        label {
-            display: block;
+        .filter-btn {
+            padding: 6px;
             font-size: 0.8rem;
             font-weight: 600;
-            margin-bottom: 4px;
-            color: #475569;
-        }
-
-        .type-toggle {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .type-btn {
-            padding: 10px;
             border: 1px solid var(--border-color);
-            background: var(--bg-color);
+            background: var(--card-bg);
+            border-radius: 6px;
             cursor: pointer;
-            border-radius: 8px;
-            font-weight: 600;
             text-align: center;
-            font-size: 0.9rem;
+            color: var(--text-muted);
         }
-
-        .type-btn.active[data-type="expense"] {
-            background: var(--danger);
-            color: white;
-            border-color: var(--danger);
-        }
-
-        .type-btn.active[data-type="income"] {
-            background: var(--success);
-            color: white;
-            border-color: var(--success);
-        }
-
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 0.95rem;
-            background-color: #fff;
+        .filter-btn.active {
+            background: #e2e8f0;
             color: var(--text-color);
+            border-color: #cbd5e1;
         }
 
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 0;
-        }
-        .checkbox-group input {
-            width: auto;
-            transform: scale(1.2);
-        }
+        input, select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; background-color: #fff; color: var(--text-color); }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+        .checkbox-group input { width: auto; transform: scale(1.2); }
 
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
+        button { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+        button:active { background-color: var(--primary-hover); }
 
-        button:active {
-            background-color: var(--primary-hover);
-        }
+        .action-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+        .btn-charts { background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 14px; font-size: 1rem; box-shadow: 0 2px 4px rgba(79, 70, 229, 0.15); }
+        .backup-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn-excel { background-color: var(--excel); padding: 10px; font-size: 0.85rem; }
+        .btn-import { background-color: #475569; padding: 10px; font-size: 0.85rem; }
 
-        /* Action Grid Buttons */
-        .action-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
+        .chart-box { background: var(--card-bg); border-radius: 12px; padding: 16px; border: 1px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-top: 10px; }
+        .chart-row { margin-bottom: 12px; }
+        .chart-label-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; }
+        .chart-bar-bg { background-color: #f1f5f9; height: 12px; border-radius: 6px; overflow: hidden; width: 100%; }
+        .chart-bar-fill { height: 100%; background-color: var(--primary); border-radius: 6px; transition: width 0.3s ease; }
+        .chart-summary-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 12px; border-top: 1px dashed var(--border-color); font-size: 0.85rem; }
 
-        .btn-charts {
-            background: linear-gradient(135deg, #6366f1, #4f46e5);
-            padding: 14px;
-            font-size: 1rem;
-            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.15);
-        }
-        .btn-charts:active {
-            background: #4338ca;
-        }
-
-        .backup-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        .btn-excel {
-            background-color: var(--excel);
-            padding: 10px;
-            font-size: 0.85rem;
-        }
-        .btn-excel:active {
-            background-color: var(--excel-hover);
-        }
-        .btn-import {
-            background-color: #475569;
-            padding: 10px;
-            font-size: 0.85rem;
-        }
-        .btn-import:active {
-            background-color: #334155;
-        }
-
-        /* DIAGRAMM / CHART SEKTION STYLE */
-        .chart-box {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 16px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            margin-top: 10px;
-        }
-
-        .chart-row {
-            margin-bottom: 12px;
-        }
-
-        .chart-label-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            margin-bottom: 4px;
-            font-weight: 500;
-        }
-
-        .chart-bar-bg {
-            background-color: #f1f5f9;
-            height: 12px;
-            border-radius: 6px;
-            overflow: hidden;
-            width: 100%;
-        }
-
-        .chart-bar-fill {
-            height: 100%;
-            background-color: var(--primary);
-            border-radius: 6px;
-            transition: width 0.3s ease;
-        }
-
-        .chart-summary-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 15px;
-            padding-top: 12px;
-            border-top: 1px dashed var(--border-color);
-            font-size: 0.85rem;
-        }
-
-        /* Mobile Transaktionsliste */
-        .list-container {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .item-card {
-            background: var(--card-bg);
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        }
-
-        .item-details {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            max-width: 70%;
-        }
-
-        .item-title {
-            font-weight: 600;
-            font-size: 0.95rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .item-sub {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .item-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .item-amount {
-            font-weight: 700;
-            font-size: 0.95rem;
-            white-space: nowrap;
-        }
-
-        .badge-recurring {
-            background: #e0f2fe;
-            color: #0369a1;
-            padding: 1px 5px;
-            border-radius: 4px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            display: inline-block;
-            margin-left: 4px;
-        }
-
-        .btn-delete {
-            background: #fee2e2;
-            color: var(--danger);
-            width: 28px;
-            height: 28px;
-            padding: 0;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-        }
-
-        .empty-state {
-            text-align: center;
-            color: var(--text-muted);
-            padding: 16px;
-            font-size: 0.9rem;
-            background: var(--card-bg);
-            border-radius: 12px;
-            border: 1px dashed var(--border-color);
-        }
+        .list-container { display: flex; flex-direction: column; gap: 8px; }
+        .item-card { background: var(--card-bg); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .item-details { display: flex; flex-direction: column; gap: 2px; max-width: 70%; }
+        .item-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-sub { font-size: 0.75rem; color: var(--text-muted); }
+        .item-right { display: flex; align-items: center; gap: 12px; }
+        .item-amount { font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+        .badge-recurring { background: #e0f2fe; color: #0369a1; padding: 1px 5px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; display: inline-block; margin-left: 4px; }
+        
+        .btn-delete { background: #fee2e2; color: var(--danger); width: 28px; height: 28px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; border: none; }
+        .empty-state { text-align: center; color: var(--text-muted); padding: 16px; font-size: 0.9rem; background: var(--card-bg); border-radius: 12px; border: 1px dashed var(--border-color); }
     </style>
 </head>
 <body>
@@ -481,12 +224,10 @@
                 <div class="type-btn active" data-type="expense">Ausgabe</div>
                 <div class="type-btn" data-type="income">Einnahme</div>
             </div>
-
             <div class="form-group">
                 <label for="amount">Betrag (€)</label>
                 <input type="number" id="amount" step="0.01" min="0.01" required placeholder="0,00">
             </div>
-
             <div class="form-group">
                 <label for="account">Konto</label>
                 <select id="account" required>
@@ -494,27 +235,22 @@
                     <option value="sparen">Sparkonto</option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label for="category">Kategorie</label>
                 <select id="category" required></select>
             </div>
-
             <div class="form-group">
                 <label for="date">Datum / Start-Stichtag</label>
                 <input type="date" id="date" required>
             </div>
-
             <div class="form-group">
                 <label for="description">Notiz / Name</label>
                 <input type="text" id="description" placeholder="z.B. Miete, Gehalt, Versicherung" required>
             </div>
-
             <div class="form-group checkbox-group">
                 <input type="checkbox" id="is-recurring">
                 <label for="is-recurring">Regelmäßige Buchung (Dauerauftrag / Abo)</label>
             </div>
-
             <div class="form-group" id="interval-group" style="display: none;">
                 <label for="interval">Turnus / Intervall</label>
                 <select id="interval">
@@ -525,29 +261,37 @@
                     <option value="12">Jährlich</option>
                 </select>
             </div>
-
             <button type="submit">Buchung speichern</button>
         </form>
     </div>
 
     <div class="section" id="recurring-list-section" style="display: none;">
-        <h2>Meine Daueraufträge & Abos</h2>
+        <h2 class="collapsible-header" id="trigger-collapse-recurring">
+            <span>Daueraufträge & Abos</span>
+            <span class="arrow" id="arrow-recurring">▼</span>
+        </h2>
         <div class="list-container" id="recurring-list"></div>
     </div>
 
     <div class="section">
-        <h2>Buchungen im laufenden Abrechnungsmonat</h2>
-        <div class="list-container" id="transaction-list"></div>
+        <h2 class="collapsible-header" id="trigger-collapse-history">
+            <span>Buchungen im Gehaltsmonat</span>
+            <span class="arrow" id="arrow-history">▼</span>
+        </h2>
+        
+        <div id="history-content-wrapper">
+            <div class="filter-toggle-container">
+                <div class="filter-btn active" data-filter="all">Alle</div>
+                <div class="filter-btn" data-filter="expense">Abbuchungen</div>
+                <div class="filter-btn" data-filter="income">Einzahlungen</div>
+            </div>
+            <div class="list-container" id="transaction-list"></div>
+        </div>
     </div>
 </div>
 
 <script>
-    // STARTBETRÄGE WIEDER KORREKT HINTERLEGT!
-    const initialBalances = {
-        giro: 2444.11,
-        sparen: 400.00
-    };
-
+    const initialBalances = { giro: 2444.11, sparen: 400.00 };
     const accountNames = { giro: "Giro", sparen: "Sparen" };
     const accountKeys = { "Giro": "giro", "Sparen": "sparen" };
     const intervalLabels = { "1": "Monatlich", "2": "Alle 2 Monate", "3": "Vierteljährlich", "6": "Halbjährlich", "12": "Jährlich" };
@@ -557,63 +301,14 @@
         income: ["Gehalt", "Zinsen", "Geschenk", "Sonstiges"]
     };
 
-    function istFeiertagOderWochenende(date) {
-        const d = new Date(date);
-        const day = d.getDay();
-        if (day === 0 || day === 6) return true;
-        const m = d.getMonth() + 1;
-        const tag = d.getDate();
-        if (m === 1 && tag === 1) return true;
-        if (m === 5 && tag === 1) return true;
-        if (m === 10 && tag === 3) return true;
-        if (m === 11 && tag === 1) return true;
-        if (m === 12 && tag === 25) return true;
-        if (m === 12 && tag === 26) return true;
-        return false;
-    }
-
-    function getEchtesGehaltsDatum(jahr, monat) {
-        let gDate = new Date(jahr, monat, 16);
-        while (istFeiertagOderWochenende(gDate)) {
-            gDate.setDate(gDate.getDate() - 1);
-        }
-        gDate.setHours(0,0,0,0);
-        return gDate;
-    }
-
-    function getAktuellerAbrechnungsZeitraum() {
-        const heute = new Date();
-        heute.setHours(0,0,0,0);
-        let zielMonat = heute.getMonth();
-        let zielJahr = heute.getFullYear();
-        let gehaltDiesenMonat = getEchtesGehaltsDatum(zielJahr, zielMonat);
-        let von, bis;
-        
-        if (heute >= gehaltDiesenMonat) {
-            von = gehaltDiesenMonat;
-            let naechsterMonat = zielMonat + 1;
-            let naechstesJahr = zielJahr;
-            if (naechsterMonat > 11) { naechsterMonat = 0; naechstesJahr++; }
-            bis = new Date(getEchtesGehaltsDatum(naechstesJahr, naechsterMonat));
-            bis.setDate(bis.getDate() - 1);
-        } else {
-            let vorigerMonat = zielMonat - 1;
-            let vorigesJahr = zielJahr;
-            if (vorigerMonat < 0) { vorigerMonat = 11; vorigesJahr--; }
-            von = getEchtesGehaltsDatum(vorigesJahr, vorigerMonat);
-            bis = new Date(gehaltDiesenMonat);
-            bis.setDate(bis.getDate() - 1);
-        }
-        von.setHours(0,0,0,0);
-        bis.setHours(23,59,59,999);
-        return { von, bis };
-    }
-
     let currentType = "expense";
+    let currentFilter = "all";
     let transactions = JSON.parse(localStorage.getItem("mob_budget_trans_v4")) || [];
 
+    // DOM Elemente
     const form = document.getElementById("transaction-form");
     const typeButtons = document.querySelectorAll(".type-btn");
+    const filterButtons = document.querySelectorAll(".filter-btn");
     const amountInput = document.getElementById("amount");
     const accountSelect = document.getElementById("account");
     const dateInput = document.getElementById("date");
@@ -632,6 +327,39 @@
     const btnTriggerFile = document.getElementById("btn-trigger-file");
     const excelFileInput = document.getElementById("excel-file-input");
 
+    // Collapsible Logic
+    const triggerCollapseRecurring = document.getElementById("trigger-collapse-recurring");
+    const arrowRecurring = document.getElementById("arrow-recurring");
+    if(triggerCollapseRecurring) {
+        triggerCollapseRecurring.addEventListener("click", () => {
+            const isHidden = recurringListEl.style.display === "none";
+            recurringListEl.style.display = isHidden ? "flex" : "none";
+            triggerCollapseRecurring.classList.toggle("collapsed", !isHidden);
+            arrowRecurring.textContent = isHidden ? "▼" : "◀";
+        });
+    }
+
+    const triggerCollapseHistory = document.getElementById("trigger-collapse-history");
+    const historyContentWrapper = document.getElementById("history-content-wrapper");
+    const arrowHistory = document.getElementById("arrow-history");
+    if(triggerCollapseHistory) {
+        triggerCollapseHistory.addEventListener("click", () => {
+            const isHidden = historyContentWrapper.style.display === "none";
+            historyContentWrapper.style.display = isHidden ? "block" : "none";
+            triggerCollapseHistory.classList.toggle("collapsed", !isHidden);
+            arrowHistory.textContent = isHidden ? "▼" : "◀";
+        });
+    }
+
+    filterButtons.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            filterButtons.forEach(b => b.classList.remove("active"));
+            e.target.classList.add("active");
+            currentFilter = e.target.dataset.filter;
+            updateUI();
+        });
+    });
+
     if (isRecurringCheckbox) {
         isRecurringCheckbox.addEventListener("change", (e) => {
             intervalGroup.style.display = e.target.checked ? "block" : "none";
@@ -646,27 +374,10 @@
         });
     }
 
-    function formatCurrency(value) {
-        return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
-    }
-
-    function formatDate(dateString) {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-
-    function getDayFromDate(dateString) {
-        if (!dateString) return "01";
-        const date = new Date(dateString);
-        return date.toLocaleDateString('de-DE', { day: '2-digit' });
-    }
-
-    function setTodayDate() {
-        if (dateInput) {
-            dateInput.value = new Date().toISOString().split('T')[0];
-        }
-    }
+    function formatCurrency(value) { return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value); }
+    function formatDate(dateString) { if (!dateString) return ""; const d = new Date(dateString); return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    function getDayFromDate(dateString) { if (!dateString) return "01"; const d = new Date(dateString); return d.toLocaleDateString('de-DE', { day: '2-digit' }); }
+    function setTodayDate() { if (dateInput) { dateInput.value = new Date().toISOString().split('T')[0]; } }
 
     function updateCategoryOptions() {
         const catSelect = document.getElementById("category");
@@ -674,18 +385,52 @@
         catSelect.innerHTML = "";
         categories[currentType].forEach(cat => {
             const option = document.createElement("option");
-            option.value = cat;
-            option.textContent = cat;
+            option.value = cat; option.textContent = cat;
             catSelect.appendChild(option);
         });
     }
 
+    function istFeiertagOderWochenende(date) {
+        const d = new Date(date); const day = d.getDay(); if (day === 0 || day === 6) return true;
+        const m = d.getMonth() + 1; const tag = d.getDate();
+        if (m === 1 && tag === 1) return true; if (m === 5 && tag === 1) return true;
+        if (m === 10 && tag === 3) return true; if (m === 11 && tag === 1) return true;
+        if (m === 12 && tag === 25) return true; if (m === 12 && tag === 26) return true;
+        return false;
+    }
+
+    function getEchtesGehaltsDatum(jahr, monat) {
+        let gDate = new Date(jahr, monat, 16);
+        while (istFeiertagOderWochenende(gDate)) { gDate.setDate(gDate.getDate() - 1); }
+        gDate.setHours(0,0,0,0);
+        return gDate;
+    }
+
+    function getAktuellerAbrechnungsZeitraum() {
+        const heute = new Date(); heute.setHours(0,0,0,0);
+        let zielMonat = heute.getMonth(); let zielJahr = heute.getFullYear();
+        let gehaltDiesenMonat = getEchtesGehaltsDatum(zielJahr, zielMonat);
+        let von, bis;
+        
+        if (heute >= gehaltDiesenMonat) {
+            von = gehaltDiesenMonat;
+            let naechsterMonat = zielMonat + 1; let naechstesJahr = zielJahr;
+            if (naechsterMonat > 11) { naechsterMonat = 0; naechstesJahr++; }
+            bis = new Date(getEchtesGehaltsDatum(naechstesJahr, naechsterMonat));
+            bis.setDate(bis.getDate() - 1);
+        } else {
+            let vorigerMonat = zielMonat - 1; let vorigesJahr = zielJahr;
+            if (vorigerMonat < 0) { vorigerMonat = 11; vorigesJahr--; }
+            von = getEchtesGehaltsDatum(vorigesJahr, vorigerMonat);
+            bis = new Date(gehaltDiesenMonat); bis.setDate(bis.getDate() - 1);
+        }
+        von.setHours(0,0,0,0); bis.setHours(23,59,59,999);
+        return { von, bis };
+    }
+
     function checkBackupStatus() {
         const lastBackup = localStorage.getItem("mob_budget_last_backup");
-        if (!lastBackup) {
-            if (backupBanner) backupBanner.style.display = "flex";
-            return;
-        }
+        if (!lastBackup) { if (backupBanner) backupBanner.style.display = "flex"; return; }
         const daysSinceBackup = (Date.now() - parseInt(lastBackup)) / (1000 * 60 * 60 * 24);
         if (backupBanner) backupBanner.style.display = daysSinceBackup >= 3 ? "flex" : "none";
     }
@@ -698,9 +443,10 @@
         return (monthsDiff % parseInt(template.interval || "1")) === 0;
     }
 
-function updateUI() {
-        // Startbeträge als Basis setzen
+    // VOLLFORTLAUFENDE KETTEN-BERECHNUNG FÜR KONTOSTAND UND PROGNOSE
+    function updateUI() {
         let balances = { ...initialBalances };
+        let projectedGiro = initialBalances.giro;
 
         if (transactionList) transactionList.innerHTML = "";
         if (recurringListEl) recurringListEl.innerHTML = "";
@@ -711,26 +457,35 @@ function updateUI() {
         const heuteMitzternacht = new Date();
         heuteMitzternacht.setHours(0,0,0,0);
 
-        // Aktuellen Abrechnungszeitraum holen
         const zyklus = getAktuellerAbrechnungsZeitraum();
         const displayCycleEl = document.getElementById("display-cycle-dates");
         if (displayCycleEl) {
             displayCycleEl.textContent = `Abrechnungszeitraum: ${formatDate(zyklus.von)} - ${formatDate(zyklus.bis)}`;
         }
 
-        // KONTOSTAND-BERECHNUNG (NUR LAUFENDE UND ZUKÜNFTIGE BUCHUNGEN DIESES ZYKLUS BERÜCKSICHTIGEN)
+        // KETTEN-RECHNUNG ÜBER ALLE TRANSAKTIONEN SEIT BEGINN AN
         realTransactions.forEach(t => {
             const amt = parseFloat(t.amount);
             const bDate = new Date(t.date);
             bDate.setHours(0,0,0,0);
 
-            // Nur Buchungen verrechnen, die im aktuellen Zyklus liegen UND bereits das heutige Datum erreicht/unterschritten haben
-            if (bDate >= zyklus.von && bDate <= heuteMitzternacht) {
+            // 1. REALE KONTOSTÄNDE (Fortlaufende Kette bis HEUTE über alle Monate)
+            if (bDate <= heuteMitzternacht) {
                 if (t.type === "income") balances[t.account] += amt; else balances[t.account] -= amt;
+            }
+
+            // 2. MONATSEND-PROGNOSE (Fortlaufend alle alten Buchungen + ALLE Buchungen des aktuellen Monats)
+            if (t.account === "giro") {
+                if (bDate < zyklus.von) {
+                    // Vergangene Monate voll anrechnen
+                    if (t.type === "income") projectedGiro += amt; else projectedGiro -= amt;
+                } else if (bDate >= zyklus.von && bDate <= zyklus.bis) {
+                    // Laufender Monat: Alle Buchungen (Vergangenheit & Zukunft) mitnehmen
+                    if (t.type === "income") projectedGiro += amt; else projectedGiro -= amt;
+                }
             }
         });
 
-        // Kontostände im Dashboard anzeigen
         const displayGiroEl = document.getElementById("display-giro");
         const displaySparenEl = document.getElementById("display-sparen");
         const displayPrognosisEl = document.getElementById("display-prognosis");
@@ -738,15 +493,23 @@ function updateUI() {
         if (displayGiroEl) displayGiroEl.textContent = formatCurrency(balances.giro);
         if (displaySparenEl) displaySparenEl.textContent = formatCurrency(balances.sparen);
 
-        // 12-Monats-Prognose für das Sparkonto berechnen
+        // Prognose-Text fürs Girokonto einblenden
+        let displayGiroPrognosisEl = document.getElementById("display-giro-prognosis");
+        if (!displayGiroPrognosisEl) {
+            displayGiroPrognosisEl = document.createElement("div");
+            displayGiroPrognosisEl.id = "display-giro-prognosis";
+            displayGiroPrognosisEl.className = "prognosis-text";
+            displayGiroPrognosisEl.style.color = "#94a3b8";
+            displayGiroEl.parentNode.appendChild(displayGiroPrognosisEl);
+        }
+        displayGiroPrognosisEl.textContent = `Prognose Restbudget (Monatsende): ${formatCurrency(projectedGiro)}`;
+
+        // 12-Monats-Prognose für das Sparkonto
         let projectedSavings = balances.sparen;
         const heute = new Date();
-        
         for (let i = 1; i <= 12; i++) {
-            let futureMonth = heute.getMonth() + i;
-            let futureYear = heute.getFullYear();
+            let futureMonth = heute.getMonth() + i; let futureYear = heute.getFullYear();
             if (futureMonth > 11) { futureYear += Math.floor(futureMonth / 12); futureMonth = futureMonth % 12; }
-
             templates.forEach(tmpl => {
                 if (tmpl.account === "sparen" && isTemplateDueInMonth(tmpl, futureYear, futureMonth)) {
                     const amt = parseFloat(tmpl.amount);
@@ -783,15 +546,19 @@ function updateUI() {
             }
         }
 
-        // Buchungsverlauf für den aktuellen Abrechnungsmonat filtern & anzeigen
-        const aktuelleAbrechnungsBuchungen = realTransactions.filter(t => {
+        // Buchungsverlauf filterbar rendern (Nur aktueller Monat)
+        let aktuelleAbrechnungsBuchungen = realTransactions.filter(t => {
             const bDate = new Date(t.date);
             return bDate >= zyklus.von && bDate <= zyklus.bis;
         });
 
+        if (currentFilter !== "all") {
+            aktuelleAbrechnungsBuchungen = aktuelleAbrechnungsBuchungen.filter(t => t.type === currentFilter);
+        }
+
         if (transactionList) {
             if (aktuelleAbrechnungsBuchungen.length === 0) {
-                transactionList.innerHTML = `<div class="empty-state">Keine Buchungen im Abrechnungszeitraum (${formatDate(zyklus.von)} - ${formatDate(zyklus.bis)}).</div>`;
+                transactionList.innerHTML = `<div class="empty-state">Keine passenden Buchungen im Zeitraum gefunden.</div>`;
             } else {
                 aktuelleAbrechnungsBuchungen.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id).forEach(t => {
                     const item = document.createElement("div");
@@ -814,67 +581,41 @@ function updateUI() {
             }
         }
 
-        renderCharts(aktuelleAbrechnungsBuchungen);
+        renderCharts(realTransactions.filter(t => { const bDate = new Date(t.date); return bDate >= zyklus.von && bDate <= zyklus.bis; }));
         checkBackupStatus();
     }
 
     function renderCharts(aktuelleBuchungen) {
         if (!chartBoxContainer) return;
         chartBoxContainer.innerHTML = "";
-
-        let gesamtEinnahmen = 0;
-        let gesamtAusgaben = 0;
-        const catTotals = {};
-
+        let gesamtEinnahmen = 0; let gesamtAusgaben = 0; const catTotals = {};
         categories.expense.forEach(c => catTotals[c] = 0);
 
         aktuelleBuchungen.forEach(t => {
             const amt = parseFloat(t.amount);
-            if (t.type === "income") {
-                gesamtEinnahmen += amt;
-            } else {
-                gesamtAusgaben += amt;
-                if (catTotals[t.category] !== undefined) catTotals[t.category] += amt;
-            }
+            if (t.type === "income") { gesamtEinnahmen += amt; } 
+            else { gesamtAusgaben += amt; if (catTotals[t.category] !== undefined) catTotals[t.category] += amt; }
         });
 
         const maxAusgabe = Math.max(...Object.values(catTotals), 0);
-
         Object.keys(catTotals).forEach(cat => {
-            const wert = catTotals[cat];
-            const prozent = maxAusgabe > 0 ? (wert / maxAusgabe) * 100 : 0;
-
+            const wert = catTotals[cat]; const prozent = maxAusgabe > 0 ? (wert / maxAusgabe) * 100 : 0;
             if (wert > 0) {
-                const row = document.createElement("div");
-                row.className = "chart-row";
+                const row = document.createElement("div"); row.className = "chart-row";
                 row.innerHTML = `
-                    <div class="chart-label-row">
-                        <span>${cat}</span>
-                        <strong>${formatCurrency(wert)}</strong>
-                    </div>
-                    <div class="chart-bar-bg">
-                        <div class="chart-bar-fill" style="width: ${prozent}%; background-color: ${cat === 'Sparen/Anlage' ? '#10b981' : '#3b82f6'}"></div>
-                    </div>
+                    <div class="chart-label-row"><span>${cat}</span><strong>${formatCurrency(wert)}</strong></div>
+                    <div class="chart-bar-bg"><div class="chart-bar-fill" style="width: ${prozent}%; background-color: ${cat === 'Sparen/Anlage' ? '#10b981' : '#3b82f6'}"></div></div>
                 `;
                 chartBoxContainer.appendChild(row);
             }
         });
 
-        if (chartBoxContainer.innerHTML === "") {
-            chartBoxContainer.innerHTML = "<div class='empty-state'>Noch keine Ausgabendaten im laufenden Zyklus vorhanden.</div>";
-        }
+        if (chartBoxContainer.innerHTML === "") { chartBoxContainer.innerHTML = "<div class='empty-state'>Noch keine Ausgabendaten im laufenden Zyklus vorhanden.</div>"; }
 
-        const statsRow = document.createElement("div");
-        statsRow.className = "chart-summary-stats";
+        const statsRow = document.createElement("div"); statsRow.className = "chart-summary-stats";
         statsRow.innerHTML = `
-            <div>
-                <span style="color:var(--text-muted); font-size:0.75rem; display:block;">Einnahmen gesamt:</span>
-                <span style="color:var(--success); font-weight:700;">${formatCurrency(gesamtEinnahmen)}</span>
-            </div>
-            <div>
-                <span style="color:var(--text-muted); font-size:0.75rem; display:block;">Ausgaben gesamt:</span>
-                <span style="color:var(--danger); font-weight:700;">${formatCurrency(gesamtAusgaben)}</span>
-            </div>
+            <div><span style="color:var(--text-muted); font-size:0.75rem; display:block;">Einnahmen gesamt:</span><span style="color:var(--success); font-weight:700;">${formatCurrency(gesamtEinnahmen)}</span></div>
+            <div><span style="color:var(--text-muted); font-size:0.75rem; display:block;">Ausgaben gesamt:</span><span style="color:var(--danger); font-weight:700;">${formatCurrency(gesamtAusgaben)}</span></div>
             <div style="grid-column: span 2; padding-top:4px; border-top:1px solid #f1f5f9;">
                 <span style="color:var(--text-muted); font-size:0.75rem; display:block;">Sparquote im Gehaltsmonat:</span>
                 <span style="font-weight:700; color: ${gesamtEinnahmen >= gesamtAusgaben ? 'var(--primary)' : 'var(--danger)'}">
@@ -885,28 +626,19 @@ function updateUI() {
         chartBoxContainer.appendChild(statsRow);
     }
 
+    // EXCEL IMPORT & EXPORT
     if (btnExportExcel) {
         btnExportExcel.addEventListener("click", () => {
             if (typeof XLSX === "undefined") return;
             const realTransactions = transactions.filter(t => !t.isTemplate);
-            if (realTransactions.length === 0 && transactions.length === 0) return;
-
             const excelData = [["FINANZBERICHT - EXPORT"], ["Erstellt am:", new Date().toLocaleDateString('de-DE')], []];
             excelData.push(["Typ", "Datum", "Konto", "Kategorie", "Beschreibung", "Betrag (€)"]);
-            
-            realTransactions.forEach(t => {
-                excelData.push([t.type === "income" ? "Einnahme" : "Ausgabe", formatDate(t.date), accountNames[t.account], t.category, t.description, t.amount]);
-            });
-
+            realTransactions.forEach(t => { excelData.push([t.type === "income" ? "Einnahme" : "Ausgabe", formatDate(t.date), accountNames[t.account], t.category, t.description, t.amount]); });
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(excelData), "Verlauf");
-
             const systemData = [["ID", "Type", "Amount", "Account", "Category", "Date", "Description", "IsTemplate", "Interval"]];
-            transactions.forEach(t => {
-                systemData.push([t.id, t.type, t.amount, accountNames[t.account], t.category, t.date, t.description, t.isTemplate ? "JA" : "NEIN", t.interval || "1"]);
-            });
+            transactions.forEach(t => { systemData.push([t.id, t.type, t.amount, accountNames[t.account], t.category, t.date, t.description, t.isTemplate ? "JA" : "NEIN", t.interval || "1"]); });
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(systemData), "APP_SYSTEM_BACKUP");
-
             XLSX.writeFile(workbook, `Finanzexport_${new Date().toISOString().slice(0,10)}.xlsx`);
             localStorage.setItem("mob_budget_last_backup", Date.now().toString());
             updateUI();
@@ -916,23 +648,17 @@ function updateUI() {
     if (btnTriggerFile && excelFileInput) {
         btnTriggerFile.addEventListener("click", () => excelFileInput.click());
         excelFileInput.addEventListener("change", (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+            const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = (evt) => {
                 try {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    const data = new Uint8Array(evt.target.result); const workbook = XLSX.read(data, { type: 'array' });
                     if (!workbook.SheetNames.includes("APP_SYSTEM_BACKUP")) return;
-
                     const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets["APP_SYSTEM_BACKUP"], { header: 1 });
                     const importedTransactions = [];
                     for(let i = 1; i < jsonData.length; i++) {
-                        const row = jsonData[i];
-                        if (!row || row.length < 7) continue;
-                        let rawDate = row[5];
-                        if (typeof rawDate === "number") rawDate = new Date(Date.UTC(0, 0, rawDate - 1)).toISOString().slice(0, 10);
-
+                        const row = jsonData[i]; if (!row || row.length < 7) continue;
+                        let rawDate = row[5]; if (typeof rawDate === "number") rawDate = new Date(Date.UTC(0, 0, rawDate - 1)).toISOString().slice(0, 10);
                         importedTransactions.push({
                             id: Number(row[0]), type: row[1] === "income" ? "income" : "expense", amount: parseFloat(row[2]),
                             account: accountKeys[row[3]] || "giro", category: row[4], date: rawDate, description: String(row[6]),
@@ -940,8 +666,7 @@ function updateUI() {
                         });
                     }
                     if (importedTransactions.length > 0 && confirm("Backup laden und bestehende Daten überschreiben?")) {
-                        transactions = importedTransactions;
-                        localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
+                        transactions = importedTransactions; localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
                         updateUI();
                     }
                 } catch (err) { alert("Fehler: " + err.message); }
@@ -953,28 +678,22 @@ function updateUI() {
 
     typeButtons.forEach(btn => {
         btn.addEventListener("click", (e) => {
-            typeButtons.forEach(b => b.classList.remove("active"));
-            e.target.classList.add("active");
-            currentType = e.target.dataset.type;
-            updateCategoryOptions();
+            typeButtons.forEach(b => b.classList.remove("active")); e.target.classList.add("active");
+            currentType = e.target.dataset.type; updateCategoryOptions();
         });
     });
 
     if (form) {
         form.addEventListener("submit", (e) => {
-            e.preventDefault();
-            const isTemplate = isRecurringCheckbox.checked;
-            const currentCatSelect = document.getElementById("category");
-
+            e.preventDefault(); const isTemplate = isRecurringCheckbox.checked; const currentCatSelect = document.getElementById("category");
             transactions.push({
                 id: Number(Date.now()), type: currentType, amount: parseFloat(amountInput.value),
                 account: accountSelect.value, category: currentCatSelect ? currentCatSelect.value : "Sonstiges",
                 date: dateInput.value, description: descInput.value.trim(), isTemplate: isTemplate, interval: isTemplate ? intervalSelect.value : "1"
             });
             localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
-
-            amountInput.value = ""; descInput.value = ""; isRecurringCheckbox.checked = false;
-            intervalGroup.style.display = "none"; setTodayDate(); updateUI();
+            amountInput.value = ""; descInput.value = ""; isRecurringCheckbox.checked = false; intervalGroup.style.display = "none";
+            setTodayDate(); autoRunRecurring(); updateUI();
         });
     }
 
@@ -986,35 +705,24 @@ function updateUI() {
         }
     });
 
-    // VOLLAUTOMATISCHER BACKGROUND RUNNER FÜR DAUERAUFTRÄGE (MIT HEUTE-SCHUTZ)
     function autoRunRecurring() {
         const zyklus = getAktuellerAbrechnungsZeitraum();
         const templates = transactions.filter(t => t.isTemplate);
         const realTransactions = transactions.filter(t => !t.isTemplate);
-
-        const heuteMitzternacht = new Date();
-        heuteMitzternacht.setHours(0,0,0,0);
+        const heuteMitzternacht = new Date(); heuteMitzternacht.setHours(0,0,0,0);
 
         const faelligeTemplates = templates.filter(tmpl => {
             const tTag = parseInt(getDayFromDate(tmpl.date));
-            
-            // Fiktives Fälligkeitsdatum in diesem Abrechnungsfenster bestimmen
             let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
             if (checkDate < zyklus.von) checkDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
             checkDate.setHours(0,0,0,0);
             
-            // Erstes Startdatum des Dauerauftrags prüfen (Dauerauftrag darf nicht in der Zukunft starten)
-            const startDate = new Date(tmpl.date);
-            startDate.setHours(0,0,0,0);
+            const startDate = new Date(tmpl.date); startDate.setHours(0,0,0,0);
             if (checkDate < startDate) return false;
 
-            // --- DER HEUTE-SCHUTZ ---
-            // Liegt das Berechnungsdatum vor dem heutigen Tag? Dann NICHT buchen (ist schon im Startguthaben drin!)
             if (checkDate < heuteMitzternacht) return false;
 
-            // Liegt der Stichtag im aktuellen Abrechnungszyklus?
             if (checkDate >= zyklus.von && checkDate <= zyklus.bis) {
-                // Prüfen, ob für diesen Zeitraum bereits gebucht wurde
                 const bereitsGebucht = realTransactions.some(rt => 
                     rt.description.includes(tmpl.description) && 
                     new Date(rt.date) >= zyklus.von && 
@@ -1032,42 +740,18 @@ function updateUI() {
                 if (targetDate < zyklus.von) targetDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
 
                 return {
-                    id: Number(Date.now() + index), 
-                    type: tmpl.type, 
-                    amount: tmpl.amount, 
-                    account: tmpl.account,
-                    category: tmpl.category, 
-                    date: targetDate.toISOString().slice(0, 10), 
-                    description: `[Abo] ${tmpl.description}`, 
-                    isTemplate: false
+                    id: Number(Date.now() + index), type: tmpl.type, amount: tmpl.amount, account: tmpl.account,
+                    category: tmpl.category, date: targetDate.toISOString().slice(0, 10), 
+                    description: `[Abo] ${tmpl.description}`, isTemplate: false
                 };
             });
-
             transactions = [...transactions, ...newBookings];
             localStorage.setItem("mob_budget_trans_v4", JSON.stringify(transactions));
         }
     }
 
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            const swCode = `
-                self.addEventListener('install', (e) => self.skipWaiting());
-                self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
-                self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
-            `;
-            const blob = new Blob([swCode], {type: 'application/javascript'});
-            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
-        });
-    }
-
-    function initApp() { 
-        setTodayDate(); 
-        updateCategoryOptions(); 
-        autoRunRecurring(); // Automatisches Buchen aktivieren
-        updateUI(); 
-    }
+    function initApp() { setTodayDate(); updateCategoryOptions(); autoRunRecurring(); updateUI(); }
     initApp();
 </script>
-
 </body>
 </html>
