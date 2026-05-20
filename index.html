@@ -11,9 +11,8 @@
     
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
-  <script>
+    <script>
         (function() {
-            // Wir holen uns dynamisch den Pfad deines aktuellen GitHub-Projekts
             const repoURL = window.location.href.split('?')[0].split('#')[0];
             
             const manifest = {
@@ -440,18 +439,29 @@
             </div>
 
             <div class="form-group">
-                <label for="date">Datum / Stichtag</label>
+                <label for="date">Datum / Start-Stichtag</label>
                 <input type="date" id="date" required>
             </div>
 
             <div class="form-group">
                 <label for="description">Notiz / Name</label>
-                <input type="text" id="description" placeholder="z.B. Miete, Gehalt, Einkauf" required>
+                <input type="text" id="description" placeholder="z.B. Miete, Gehalt, Versicherung" required>
             </div>
 
             <div class="form-group checkbox-group">
                 <input type="checkbox" id="is-recurring">
-                <label for="is-recurring">Regelmäßige Buchung (Dauerauftrag)</label>
+                <label for="is-recurring">Regelmäßige Buchung (Dauerauftrag / Abo)</label>
+            </div>
+
+            <div class="form-group" id="interval-group" style="display: none;">
+                <label for="interval">Turnus / Intervall</label>
+                <select id="interval">
+                    <option value="1">Monatlich</option>
+                    <option value="2">Alle 2 Monate</option>
+                    <option value="3">Vierteljährlich (Alle 3 Monate)</option>
+                    <option value="6">Halbjährlich (Alle 6 Monate)</option>
+                    <option value="12">Jährlich</option>
+                </select>
             </div>
 
             <button type="submit">Buchung speichern</button>
@@ -487,13 +497,21 @@
         "Sparen": "sparen"
     };
 
+    const intervalLabels = {
+        "1": "Monatlich",
+        "2": "Alle 2 Monate",
+        "3": "Vierteljährlich",
+        "6": "Halbjährlich",
+        "12": "Jährlich"
+    };
+
     const categories = {
         expense: ["Wohnen", "Lebensmittel", "Freizeit", "Mobilität", "Sparen/Anlage", "Sonstiges"],
         income: ["Gehalt", "Zinsen", "Geschenk", "Sonstiges"]
     };
 
     let currentType = "expense";
-    let transactions = JSON.parse(localStorage.getItem("mob_budget_trans_v2")) || [];
+    let transactions = JSON.parse(localStorage.getItem("mob_budget_trans_v3")) || [];
 
     const form = document.getElementById("transaction-form");
     const typeButtons = document.querySelectorAll(".type-btn");
@@ -502,6 +520,8 @@
     const dateInput = document.getElementById("date");
     const descInput = document.getElementById("description");
     const isRecurringCheckbox = document.getElementById("is-recurring");
+    const intervalGroup = document.getElementById("interval-group");
+    const intervalSelect = document.getElementById("interval");
     const transactionList = document.getElementById("transaction-list");
     const recurringListEl = document.getElementById("recurring-list");
     const recurringListSection = document.getElementById("recurring-list-section");
@@ -513,8 +533,12 @@
     const excelFileInput = document.getElementById("excel-file-input");
     const backupBanner = document.getElementById("backup-alert-banner");
 
-    let currentGiroBalance = initialBalances.giro;
-    let currentSparenBalance = initialBalances.sparen;
+    // Steuerung für das dynamische Einblenden des Intervalls
+    if (isRecurringCheckbox) {
+        isRecurringCheckbox.addEventListener("change", (e) => {
+            intervalGroup.style.display = e.target.checked ? "block" : "none";
+        });
+    }
 
     function formatCurrency(value) {
         return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
@@ -567,6 +591,25 @@
         }
     }
 
+    // Hilfsfunktion: Berechnet, ob ein Dauerauftrag in einem bestimmten Zielmonat fällig ist
+    function isTemplateDueInMonth(template, targetYear, targetMonth) {
+        if (!template.date) return false;
+        
+        const startDate = new Date(template.date);
+        const startYear = startDate.getFullYear();
+        const startMonth = startDate.getMonth(); // 0-11
+        
+        // Berechne die Differenz in Monaten
+        const monthsDiff = (targetYear - startYear) * 12 + (targetMonth - startMonth);
+        
+        // Wenn das Startdatum in der Zukunft liegt, ist es nicht fällig
+        if (monthsDiff < 0) return false;
+        
+        // Fällig, wenn die Monatsdifferenz glatt durch das Intervall teilbar ist
+        const interval = parseInt(template.interval || "1");
+        return (monthsDiff % interval) === 0;
+    }
+
     function updateUI() {
         let balances = { ...initialBalances };
 
@@ -585,9 +628,6 @@
             }
         });
 
-        currentGiroBalance = balances.giro;
-        currentSparenBalance = balances.sparen;
-
         const displayGiroEl = document.getElementById("display-giro");
         const displaySparenEl = document.getElementById("display-sparen");
         const displayPrognosisEl = document.getElementById("display-prognosis");
@@ -595,16 +635,34 @@
         if (displayGiroEl) displayGiroEl.textContent = formatCurrency(balances.giro);
         if (displaySparenEl) displaySparenEl.textContent = formatCurrency(balances.sparen);
 
-        const futureSavings = balances.sparen + (12 * 400);
-        if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(futureSavings)}`;
-
+        // Intelligente 12-Monats-Prognose unter Berücksichtigung der Intervalle!
+        let projectedSavings = balances.sparen;
         const heute = new Date();
-        const aktuellerMonatSchnitt = heute.toISOString().slice(0, 7);
         
-        const faelligeTemplates = templates.filter(tmpl => {
-            if (!tmpl.date) return true;
-            return tmpl.date.substring(0, 7) <= aktuellerMonatSchnitt;
-        });
+        for (let i = 1; i <= 12; i++) {
+            projectedSavings += 400; // Sparrate standardmäßig addieren
+            
+            let futureMonth = heute.getMonth() + i;
+            let futureYear = heute.getFullYear();
+            if (futureMonth > 11) {
+                futureYear += Math.floor(futureMonth / 12);
+                futureMonth = futureMonth % 12;
+            }
+
+            templates.forEach(tmpl => {
+                if (tmpl.account === "sparen" && isTemplateDueInMonth(tmpl, futureYear, futureMonth)) {
+                    const amt = parseFloat(tmpl.amount);
+                    if (tmpl.type === "income") projectedSavings += amt; else projectedSavings -= amt;
+                }
+            });
+        }
+        if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(projectedSavings)}`;
+
+        // Prüfen, welche Daueraufträge DIESEN Monat fällig sind
+        const currentYear = heute.getFullYear();
+        const currentMonth = heute.getMonth();
+        
+        const faelligeTemplates = templates.filter(tmpl => isTemplateDueInMonth(tmpl, currentYear, currentMonth));
 
         if (recurringSection) {
             recurringSection.style.display = faelligeTemplates.length > 0 ? "block" : "none";
@@ -627,13 +685,12 @@
 
                     const prefix = t.type === "income" ? "+" : "-";
                     const colorStyle = t.type === "income" ? "color: var(--success);" : "color: var(--danger);";
-                    
-                    const startInfo = t.date ? ` (Ab ${formatDate(t.date)})` : '';
+                    const intervalText = intervalLabels[t.interval || "1"] || "Monatlich";
 
                     item.innerHTML = `
                         <div class="item-details">
-                            <span class="item-title">${t.description} <span class="badge-recurring">Abo</span></span>
-                            <span class="item-sub">Monatlich am ${getDayFromDate(t.date)}.${startInfo} • ${accountNames[t.account]}</span>
+                            <span class="item-title">${t.description} <span class="badge-recurring">${intervalText}</span></span>
+                            <span class="item-sub">Stichtag: Tag ${getDayFromDate(t.date)} • ${accountNames[t.account]}</span>
                         </div>
                         <div class="item-right">
                             <span class="item-amount" style="${colorStyle}">${prefix} ${formatCurrency(t.amount)}</span>
@@ -718,9 +775,9 @@
             const mainSheet = XLSX.utils.aoa_to_sheet(excelData);
             XLSX.utils.book_append_sheet(workbook, mainSheet, "Verlauf & Prognose");
 
-            const systemData = [["ID", "Type", "Amount", "Account", "Category", "Date", "Description", "IsTemplate"]];
+            const systemData = [["ID", "Type", "Amount", "Account", "Category", "Date", "Description", "IsTemplate", "Interval"]];
             transactions.forEach(t => {
-                systemData.push([t.id, t.type, t.amount, accountNames[t.account], t.category, t.date, t.description, t.isTemplate ? "JA" : "NEIN"]);
+                systemData.push([t.id, t.type, t.amount, accountNames[t.account], t.category, t.date, t.description, t.isTemplate ? "JA" : "NEIN", t.interval || "1"]);
             });
             const sysSheet = XLSX.utils.aoa_to_sheet(systemData);
             XLSX.utils.book_append_sheet(workbook, sysSheet, "APP_SYSTEM_BACKUP");
@@ -772,14 +829,15 @@
                             category: row[4] || "Sonstiges",
                             date: rawDate || new Date().toISOString().slice(0, 10),
                             description: String(row[6] || ""),
-                            isTemplate: row[7] === "JA"
+                            isTemplate: row[7] === "JA",
+                            interval: row[8] ? String(row[8]) : "1"
                         });
                     }
 
                     if (importedTransactions.length > 0) {
                         if (confirm(`Möchtest du die ${importedTransactions.length} importierten Buchungen laden? Deine aktuellen App-Daten werden dabei überschrieben.`)) {
                             transactions = importedTransactions;
-                            localStorage.setItem("mob_budget_trans_v2", JSON.stringify(transactions));
+                            localStorage.setItem("mob_budget_trans_v3", JSON.stringify(transactions));
                             alert("Backup erfolgreich wiederhergestellt!");
                             updateUI();
                         }
@@ -818,15 +876,17 @@
                 category: currentCatSelect ? currentCatSelect.value : "Sonstiges",
                 date: dateInput.value, 
                 description: descInput.value.trim(),
-                isTemplate: isTemplate
+                isTemplate: isTemplate,
+                interval: isTemplate ? intervalSelect.value : "1"
             };
 
             transactions.push(newTransaction);
-            localStorage.setItem("mob_budget_trans_v2", JSON.stringify(transactions));
+            localStorage.setItem("mob_budget_trans_v3", JSON.stringify(transactions));
 
             amountInput.value = "";
             descInput.value = "";
             isRecurringCheckbox.checked = false;
+            intervalGroup.style.display = "none";
             setTodayDate();
 
             updateUI();
@@ -837,7 +897,7 @@
         if (e.target.classList.contains("btn-delete")) {
             const idToDelete = Number(e.target.dataset.id);
             transactions = transactions.filter(t => Number(t.id) !== idToDelete);
-            localStorage.setItem("mob_budget_trans_v2", JSON.stringify(transactions));
+            localStorage.setItem("mob_budget_trans_v3", JSON.stringify(transactions));
             updateUI();
         }
     });
@@ -845,13 +905,14 @@
     if (btnRunRecurring) {
         btnRunRecurring.addEventListener("click", () => {
             const heute = new Date();
-            const currentYearMonth = heute.toISOString().slice(0, 7);
+            const currentYear = heute.getFullYear();
+            const currentMonth = heute.getMonth();
+            const currentYearMonthStr = heute.toISOString().slice(0, 7);
+            
             const templates = transactions.filter(t => t.isTemplate);
             
-            const faelligeTemplates = templates.filter(tmpl => {
-                if (!tmpl.date) return true;
-                return tmpl.date.substring(0, 7) <= currentYearMonth;
-            });
+            // Filtert nur die Daueraufträge, die DIESEN Monat laut Intervall fällig sind
+            const faelligeTemplates = templates.filter(tmpl => isTemplateDueInMonth(tmpl, currentYear, currentMonth));
 
             if (faelligeTemplates.length === 0) {
                 alert("Keine fälligen Daueraufträge für diesen Monat gefunden!");
@@ -860,7 +921,7 @@
 
             const newBookings = faelligeTemplates.map((tmpl, index) => {
                 const templateDay = getDayFromDate(tmpl.date);
-                const targetDateStr = `${currentYearMonth}-${templateDay}`;
+                const targetDateStr = `${currentYearMonthStr}-${templateDay}`;
 
                 return {
                     id: Number(Date.now() + index + Math.floor(Math.random() * 100)),
@@ -875,7 +936,7 @@
             });
 
             transactions = [...transactions, ...newBookings];
-            localStorage.setItem("mob_budget_trans_v2", JSON.stringify(transactions));
+            localStorage.setItem("mob_budget_trans_v3", JSON.stringify(transactions));
             
             const monatsName = heute.toLocaleDateString('de-DE', { month: 'long' });
             alert(`${newBookings.length} regelmäßige Buchung(en) wurden erfolgreich für den Monat ${monatsName} verbucht!`);
@@ -890,7 +951,6 @@
                 self.addEventListener('install', (e) => self.skipWaiting());
                 self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
                 self.addEventListener('fetch', (e) => {
-                    // Reiner Passthrough, da die Datei lokal liegt
                     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
                 });
             `;
