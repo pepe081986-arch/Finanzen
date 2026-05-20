@@ -635,12 +635,12 @@
         if (displayGiroEl) displayGiroEl.textContent = formatCurrency(balances.giro);
         if (displaySparenEl) displaySparenEl.textContent = formatCurrency(balances.sparen);
 
-        // Intelligente 12-Monats-Prognose unter Berücksichtigung der Intervalle!
+       // --- VEREINFACHTE & DYNAMISCHE 12-MONATS-PROGNOSE ---
         let projectedSavings = balances.sparen;
         const heute = new Date();
         
         for (let i = 1; i <= 12; i++) {
-            projectedSavings += 400; // Sparrate standardmäßig addieren
+            // KEINE feste Sparrate mehr! Die Berechnung basiert rein auf deinen hinterlegten Daueraufträgen.
             
             let futureMonth = heute.getMonth() + i;
             let futureYear = heute.getFullYear();
@@ -650,9 +650,14 @@
             }
 
             templates.forEach(tmpl => {
+                // Wir prüfen, ob der Dauerauftrag das Sparkonto betrifft und in diesem zukünftigen Monat fällig ist
                 if (tmpl.account === "sparen" && isTemplateDueInMonth(tmpl, futureYear, futureMonth)) {
                     const amt = parseFloat(tmpl.amount);
-                    if (tmpl.type === "income") projectedSavings += amt; else projectedSavings -= amt;
+                    if (tmpl.type === "income") {
+                        projectedSavings += amt;
+                    } else {
+                        projectedSavings -= amt;
+                    }
                 }
             });
         }
