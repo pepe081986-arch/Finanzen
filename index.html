@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Finanz-Manager</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Finanz-Manager">
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <script>
+        (function() {
+            const manifest = {
+                "short_name": "Finanzen",
+                "name": "Finanz-Manager Mobil",
+                "icons": [
+                    {
+                        "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='512' height='512'><rect width='512' height='512' rx='100' fill='%231e293b'/><circle cx='256' cy='256' r='180' fill='none' stroke='%233b82f6' stroke-width='30'/><path d='M220 150 L310 150 M220 220 L310 220 M220 290 L310 290 M200 360 L320 360' stroke='%2310b981' stroke-width='25' stroke-linecap='round'/></svg>",
+                        "type": "image/svg+xml",
+                        "sizes": "512x512",
+                        "purpose": "any maskable"
+                    }
+                ],
+                "start_url": window.location.href,
+                "background_color": "#f8fafc",
+                "theme_color": "#1e293b",
+                "display": "standalone",
+                "orientation": "portrait"
+            };
+            const stringManifest = JSON.stringify(manifest);
+            const blob = new Blob([stringManifest], {type: 'application/json'});
+            const manifestURL = URL.createObjectURL(blob);
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = manifestURL;
+            document.head.appendChild(link);
+        })();
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --excel: #16a34a;
+            --excel-hover: #15803d;
+            --border-color: #e2e8f0;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 12px;
+            line-height: 1.4;
+            font-size: 15px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 15px;
+            text-align: center;
+            padding-top: 10px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: #0f172a;
+        }
+
+        h2 {
+            font-size: 1.15rem;
+            margin-bottom: 12px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .card.highlight {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: white;
+            border: none;
+        }
+
+        .card h3 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        .card.highlight h3 {
+            color: #94a3b8;
+        }
+
+        .balance {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .prognosis-text {
+            font-size: 0.85rem;
+            margin-top: 6px;
+            color: #059669;
+            font-weight: 500;
+        }
+
+        /* Backup Hinweis-Banner */
+        .backup-banner {
+            background-color: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #b45309;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        /* Formular Styling */
+        form {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #475569;
+        }
+
+        .type-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .type-btn {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .type-btn.active[data-type="expense"] {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+
+        .type-btn.active[data-type="income"] {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background-color: #fff;
+            color: var(--text-color);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+        .checkbox-group input {
+            width: auto;
+            transform: scale(1.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:active {
+            background-color: var(--primary-hover);
+        }
+
+        /* Excel Buttons */
+        .excel-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .btn-excel {
+            background-color: var(--excel);
+            padding: 12px;
+        }
+        .btn-excel:active {
+            background-color: var(--excel-hover);
+        }
+        .btn-import {
+            background-color: #475569;
+        }
+        .btn-import:active {
+            background-color: #334155;
+        }
+
+        /* Mobile Transaktionsliste */
+        .list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .item-card {
+            background: var(--card-bg);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .item-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-width: 70%;
+        }
+
+        .item-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .item-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .item-amount {
+            font-weight: 700;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .badge-recurring {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-left: 4px;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: var(--danger);
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-trigger-recurring {
+            background: #ecfdf5;
+            color: #047857;
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            width: auto;
+            white-space: nowrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 16px;
+            font-size: 0.9rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px dashed var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Finanz-Manager</h1>
+    </header>
+
+    <div id="backup-alert-banner" class="backup-banner" style="display: none;">
+        <span>⚠️ Letztes Excel-Backup ist über 3 Tage her!</span>
+    </div>
+
+    <div class="dashboard">
+        <div class="card highlight">
+            <h3>Verfügbares Vermögen (Giro)</h3>
+            <div class="balance" id="display-giro">2.444,11 €</div>
+        </div>
+        <div class="card">
+            <h3>Sparkonto</h3>
+            <div class="balance" id="display-sparen">400,00 €</div>
+            <div class="prognosis-text" id="display-prognosis">Prognose (12 Monate): 5.200,00 €</div>
+        </div>
+    </div>
+
+    <div class="excel-actions">
+        <button class="btn-excel" id="btn-export-excel">📊 Daten nach Excel exportieren</button>
+        <button class="btn-import" id="btn-trigger-file">📅 Backup aus Excel importieren</button>
+        <input type="file" id="excel-file-input" accept=".xlsx" style="display: none;">
+    </div>
+
+    <div class="section" id="recurring-trigger-section" style="display: none;">
+        <div class="item-card" style="background: #f0fdf4; border-color: #bbf7d0;">
+            <div class="item-details">
+                <span class="item-title" style="color: #166534;" id="recurring-trigger-title">Regelmäßige Buchungen</span>
+                <span class="item-sub">Fügt alle fälligen Daueraufträge als echte Buchungen hinzu.</span>
+            </div>
+            <button class="btn-trigger-recurring" id="btn-run-recurring">Jetzt buchen</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Neue Transaktion</h2>
+        <form id="transaction-form">
+            <div class="type-toggle">
+                <div class="type-btn active" data-type="expense">Ausgabe</div>
+                <div class="type-btn" data-type="income">Einnahme</div>
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Betrag (€)</label>
+                <input type="number" id="amount" step="0.01" min="0.01" required placeholder="0,00">
+            </div>
+
+            <div class="form-group">
+                <label for="account">Konto</label>
+                <select id="account" required>
+                    <option value="giro">Girokonto</option>
+                    <option value="sparen">Sparkonto</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="category">Kategorie</label>
+                <select id="category" required></select>
+            </div>
+
+            <div class="form-group">
+                <label for="date">Datum / Stichtag</label>
+                <input type="date" id="date" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Notiz / Name</label>
+                <input type="text" id="description" placeholder="z.B. Miete, Gehalt, Einkauf" required>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="is-recurring">
+                <label for="is-recurring">Regelmäßige Buchung (Dauerauftrag)</label>
+            </div>
+
+            <button type="submit">Buchung speichern</button>
+        </form>
+    </div>
+
+    <div class="section" id="recurring-list-section" style="display: none;">
+        <h2>Meine Daueraufträge & Abos</h2>
+        <div class="list-container" id="recurring-list">
+            </div>
+    </div>
+
+    <div class="section">
+        <h2>Letzte Buchungen</h2>
+        <div class="list-container" id="transaction-list">
+            </div>
+    </div>
+</div>
+
+<script>
+    const initialBalances = {
+        giro: 2444.11,
+        sparen: 400.00
+    };
+
+    const accountNames = {
+        giro: "Giro",
+        sparen: "Sparen"
+    };
+    
+    const accountKeys = {
+        "Giro": "giro",
+        "Sparen": "sparen"
+    };
+
+    const categories = {
+        expense: ["Wohnen", "Lebensmittel", "Freizeit", "Mobilität", "Sparen/Anlage", "Sonstiges"],
+        income: ["Gehalt", "Zinsen", "Geschenk", "Sonstiges"]
+    };
+
+    let currentType = "expense";
+    let transactions = JSON.parse(localStorage.getItem("mob_budget_trans_v2")) || [];
+
+    const form = document.getElementById("transaction-form");
+    const typeButtons = document.querySelectorAll(".type-btn");
+    const amountInput = document.getElementById("amount");
+    const accountSelect = document.getElementById("account");
+    const dateInput = document.getElementById("date");
+    const descInput = document.getElementById("description");
+    const isRecurringCheckbox = document.getElementById("is-recurring");
+    const transactionList = document.getElementById("transaction-list");
+    const recurringListEl = document.getElementById("recurring-list");
+    const recurringListSection = document.getElementById("recurring-list-section");
+    const recurringSection = document.getElementById("recurring-trigger-section");
+    const recurringTriggerTitle = document.getElementById("recurring-trigger-title");
+    const btnRunRecurring = document.getElementById("btn-run-recurring");
+    const btnExportExcel = document.getElementById("btn-export-excel");
+    const btnTriggerFile = document.getElementById("btn-trigger-file");
+    const excelFileInput = document.getElementById("excel-file-input");
+    const backupBanner = document.getElementById("backup-alert-banner");
+
+    let currentGiroBalance = initialBalances.giro;
+    let currentSparenBalance = initialBalances.sparen;
+
+    function formatCurrency(value) {
+        return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function getDayFromDate(dateString) {
+        if (!dateString) return "01";
+        const date = new Date(dateString);
+        return date.toLocaleDateString('de-DE', { day: '2-digit' });
+    }
+
+    function setTodayDate() {
+        if (dateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+    }
+
+    function updateCategoryOptions() {
+        const catSelect = document.getElementById("category");
+        if (!catSelect) return;
+        
+        catSelect.innerHTML = "";
+        categories[currentType].forEach(cat => {
+            const option = document.createElement("option");
+            option.value = cat;
+            option.textContent = cat;
+            catSelect.appendChild(option);
+        });
+    }
+
+    function checkBackupStatus() {
+        const lastBackup = localStorage.getItem("mob_budget_last_backup");
+        if (!lastBackup) {
+            if (backupBanner) backupBanner.style.display = "flex";
+            return;
+        }
+        
+        const daysSinceBackup = (Date.now() - parseInt(lastBackup)) / (1000 * 60 * 60 * 24);
+        if (daysSinceBackup >= 3) {
+            if (backupBanner) backupBanner.style.display = "flex";
+        } else {
+            if (backupBanner) backupBanner.style.display = "none";
+        }
+    }
+
+    function updateUI() {
+        let balances = { ...initialBalances };
+
+        if (transactionList) transactionList.innerHTML = "";
+        if (recurringListEl) recurringListEl.innerHTML = "";
+
+        const templates = transactions.filter(t => t.isTemplate);
+        const realTransactions = transactions.filter(t => !t.isTemplate);
+
+        realTransactions.forEach(t => {
+            const amt = parseFloat(t.amount);
+            if (t.type === "income") {
+                balances[t.account] += amt;
+            } else {
+                balances[t.account] -= amt;
+            }
+        });
+
+        currentGiroBalance = balances.giro;
+        currentSparenBalance = balances.sparen;
+
+        const displayGiroEl = document.getElementById("display-giro");
+        const displaySparenEl = document.getElementById("display-sparen");
+        const displayPrognosisEl = document.getElementById("display-prognosis");
+
+        if (displayGiroEl) displayGiroEl.textContent = formatCurrency(balances.giro);
+        if (displaySparenEl) displaySparenEl.textContent = formatCurrency(balances.sparen);
+
+        const futureSavings = balances.sparen + (12 * 400);
+        if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(futureSavings)}`;
+
+        const heute = new Date();
+        const aktuellerMonatSchnitt = heute.toISOString().slice(0, 7);
+        
+        const faelligeTemplates = templates.filter(tmpl => {
+            if (!tmpl.date) return true;
+            return tmpl.date.substring(0, 7) <= aktuellerMonatSchnitt;
+        });
+
+        if (recurringSection) {
+            recurringSection.style.display = faelligeTemplates.length > 0 ? "block" : "none";
+        }
+        
+        if (recurringTriggerTitle) {
+            const monatsName = heute.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            recurringTriggerTitle.textContent = `Buchungen für ${monatsName}`;
+        }
+        
+        // --- 1. RENDER: DAUERAUFTRÄGE ---
+        if (recurringListSection) {
+            if (templates.length > 0) {
+                recurringListSection.style.display = "block";
+                templates.sort((a, b) => b.id - a.id).forEach(t => {
+                    const item = document.createElement("div");
+                    item.className = "item-card";
+                    item.style.borderLeft = "4px solid var(--primary)";
+                    item.style.background = "#f8fafc";
+
+                    const prefix = t.type === "income" ? "+" : "-";
+                    const colorStyle = t.type === "income" ? "color: var(--success);" : "color: var(--danger);";
+                    
+                    const startInfo = t.date ? ` (Ab ${formatDate(t.date)})` : '';
+
+                    item.innerHTML = `
+                        <div class="item-details">
+                            <span class="item-title">${t.description} <span class="badge-recurring">Abo</span></span>
+                            <span class="item-sub">Monatlich am ${getDayFromDate(t.date)}.${startInfo} • ${accountNames[t.account]}</span>
+                        </div>
+                        <div class="item-right">
+                            <span class="item-amount" style="${colorStyle}">${prefix} ${formatCurrency(t.amount)}</span>
+                            <button class="btn-delete" data-id="${t.id}">×</button>
+                        </div>
+                    `;
+                    recurringListEl.appendChild(item);
+                });
+            } else {
+                recurringListSection.style.display = "none";
+            }
+        }
+
+        // --- 2. RENDER: ECHTE BUCHUNGEN ---
+        if (transactionList) {
+            if (realTransactions.length === 0) {
+                transactionList.innerHTML = `<div class="empty-state">Noch keine Buchungen vorhanden.</div>`;
+            } else {
+                realTransactions.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id).forEach(t => {
+                    const item = document.createElement("div");
+                    item.className = "item-card";
+
+                    const prefix = t.type === "income" ? "+" : "-";
+                    const colorStyle = t.type === "income" ? "color: var(--success);" : "color: var(--danger);";
+
+                    item.innerHTML = `
+                        <div class="item-details">
+                            <span class="item-title">${t.description}</span>
+                            <span class="item-sub">${formatDate(t.date)} • ${accountNames[t.account]} • ${t.category}</span>
+                        </div>
+                        <div class="item-right">
+                            <span class="item-amount" style="${colorStyle}">${prefix} ${formatCurrency(t.amount)}</span>
+                            <button class="btn-delete" data-id="${t.id}">×</button>
+                        </div>
+                    `;
+                    transactionList.appendChild(item);
+                });
+            }
+        }
+
+        checkBackupStatus();
+    }
+
+    // EXPORT-LOGIK
+    if (btnExportExcel) {
+        btnExportExcel.addEventListener("click", () => {
+            if (typeof XLSX === "undefined") {
+                alert("Excel-Bibliothek lädt noch.");
+                return;
+            }
+
+            const realTransactions = transactions.filter(t => !t.isTemplate);
+            const templateTransactions = transactions.filter(t => t.isTemplate);
+
+            if (realTransactions.length === 0 && templateTransactions.length === 0) {
+                alert("Keine Daten zum Exportieren vorhanden!");
+                return;
+            }
+
+            const excelData = [["FINANZBERICHT - EXPORT"], ["Erstellt am:", new Date().toLocaleDateString('de-DE')], []];
+            
+            const grouped = {};
+            realTransactions.forEach(t => {
+                const monthKey = t.date ? t.date.substring(0, 7) : "Unbekannt";
+                if (!grouped[monthKey]) grouped[monthKey] = { income: [], expense: [] };
+                if (t.type === "income") grouped[monthKey].income.push(t); else grouped[monthKey].expense.push(t);
+            });
+
+            Object.keys(grouped).sort().forEach(month => {
+                excelData.push([`MONAT: ${month}`, "", "", ""]);
+                excelData.push(["Typ", "Datum", "Konto", "Kategorie", "Beschreibung", "Betrag (€)"]);
+                let incSum = 0, expSum = 0;
+                grouped[month].income.forEach(t => { excelData.push(["Einnahme", formatDate(t.date), accountNames[t.account], t.category, t.description, t.amount]); incSum += t.amount; });
+                grouped[month].expense.forEach(t => { excelData.push(["Ausgabe", formatDate(t.date), accountNames[t.account], t.category, t.description, t.amount]); expSum += t.amount; });
+                excelData.push(["", "", "", "", "Gesamte Einnahmen:", incSum]);
+                excelData.push(["", "", "", "", "Gesamte Ausgaben:", expSum]);
+                excelData.push(["", "", "", "", "Monats-Saldo:", incSum - expSum]);
+                excelData.push([]);
+            });
+
+            const workbook = XLSX.utils.book_new();
+            const mainSheet = XLSX.utils.aoa_to_sheet(excelData);
+            XLSX.utils.book_append_sheet(workbook, mainSheet, "Verlauf & Prognose");
+
+            const systemData = [["ID", "Type", "Amount", "Account", "Category", "Date", "Description", "IsTemplate"]];
+            transactions.forEach(t => {
+                systemData.push([t.id, t.type, t.amount, accountNames[t.account], t.category, t.date, t.description, t.isTemplate ? "JA" : "NEIN"]);
+            });
+            const sysSheet = XLSX.utils.aoa_to_sheet(systemData);
+            XLSX.utils.book_append_sheet(workbook, sysSheet, "APP_SYSTEM_BACKUP");
+
+            const timeStamp = new Date().toISOString().slice(0,10);
+            XLSX.writeFile(workbook, `Finanzexport_${timeStamp}.xlsx`);
+            localStorage.setItem("mob_budget_last_backup", Date.now().toString());
+            updateUI();
+        });
+    }
+
+    // IMPORT LOGIK
+    if (btnTriggerFile && excelFileInput) {
+        btnTriggerFile.addEventListener("click", () => excelFileInput.click());
+        
+        excelFileInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    if (!workbook.SheetNames.includes("APP_SYSTEM_BACKUP")) {
+                        alert("Fehler: Diese Excel-Datei enthält kein gültiges App-System-Backup.");
+                        return;
+                    }
+
+                    const worksheet = workbook.Sheets["APP_SYSTEM_BACKUP"];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    const importedTransactions = [];
+                    for(let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || row.length < 7) continue;
+
+                        let rawDate = row[5];
+                        if (typeof rawDate === "number") {
+                            rawDate = new Date(Date.UTC(0, 0, rawDate - 1)).toISOString().slice(0, 10);
+                        }
+
+                        importedTransactions.push({
+                            id: Number(row[0]) || Date.now() + i,
+                            type: row[1] === "income" ? "income" : "expense",
+                            amount: parseFloat(row[2]) || 0,
+                            account: accountKeys[row[3]] || "giro",
+                            category: row[4] || "Sonstiges",
+                            date: rawDate || new Date().toISOString().slice(0, 10),
+                            description: String(row[6] || ""),
+                            isTemplate: row[7] === "JA"
+                        });
+                    }
+
+                    if (importedTransactions.length > 0) {
+                        if (confirm(`Möchtest du die ${importedTransactions.length} importierten Buchungen laden? Deine aktuellen App-Daten werden dabei überschrieben.`)) {
+                            transactions = importedTransactions;
+                            localStorage.setItem("mob_budget_trans_v2", JSON.stringify(transactions));
+                            alert("Backup erfolgreich wiederhergestellt!");
+                            updateUI();
+                        }
+                    } else {
+                        alert("Es wurden keine gültigen Buchungsdaten in der Datei gefunden.");
+                    }
+                } catch (err) {
+                    alert("Fehler beim Lesen der Excel-Datei: " + err.message);
+                }
+                excelFileInput.value = "";
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    typeButtons.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            typeButtons.forEach(b => b.classList.remove("active"));
+            e.target.classList.add("active");
+            currentType = e.target.dataset.type;
+            updateCategoryOptions();
+        });
+    });
+
+    if (form) {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const isTemplate = isRecurringCheckbox.checked;
+            const currentCatSelect = document.getElementById("category");
+
+            const newTransaction = {
+                id: Number(Date.now()),
+                type: currentType,
+                amount: parseFloat(amountInput.value),
+                account: accountSelect.value,
+                category: currentCatSelect ? currentCatSelect.value : "Sonstiges",
+                date: dateInput.value, 
+                description: descInput.value.trim(),
+                isTemplate: isTemplate
+            };
+
+            transactions.push(newTransaction);
+            localStorage.setItem("mob_budget_trans_v2", JSON.stringify(transactions));
+
+            amountInput.value = "";
+            descInput.value = "";
+            isRecurringCheckbox.checked = false;
+            setTodayDate();
+
+            updateUI();
+        });
+    }
+
+    document.addEventListener("click", (e) => {
+        if (e.target.classList.contains("btn-delete")) {
+            const idToDelete = Number(e.target.dataset.id);
+            transactions = transactions.filter(t => Number(t.id) !== idToDelete);
+            localStorage.setItem("mob_budget_trans_v2", JSON.stringify(transactions));
+            updateUI();
+        }
+    });
+
+    if (btnRunRecurring) {
+        btnRunRecurring.addEventListener("click", () => {
+            const heute = new Date();
+            const currentYearMonth = heute.toISOString().slice(0, 7);
+            const templates = transactions.filter(t => t.isTemplate);
+            
+            const faelligeTemplates = templates.filter(tmpl => {
+                if (!tmpl.date) return true;
+                return tmpl.date.substring(0, 7) <= currentYearMonth;
+            });
+
+            if (faelligeTemplates.length === 0) {
+                alert("Keine fälligen Daueraufträge für diesen Monat gefunden!");
+                return;
+            }
+
+            const newBookings = faelligeTemplates.map((tmpl, index) => {
+                const templateDay = getDayFromDate(tmpl.date);
+                const targetDateStr = `${currentYearMonth}-${templateDay}`;
+
+                return {
+                    id: Number(Date.now() + index + Math.floor(Math.random() * 100)),
+                    type: tmpl.type,
+                    amount: tmpl.amount,
+                    account: tmpl.account,
+                    category: tmpl.category,
+                    date: targetDateStr,
+                    description: `[Abo] ${tmpl.description}`,
+                    isTemplate: false
+                };
+            });
+
+            transactions = [...transactions, ...newBookings];
+            localStorage.setItem("mob_budget_trans_v2", JSON.stringify(transactions));
+            
+            const monatsName = heute.toLocaleDateString('de-DE', { month: 'long' });
+            alert(`${newBookings.length} regelmäßige Buchung(en) wurden erfolgreich für den Monat ${monatsName} verbucht!`);
+            updateUI();
+        });
+    }
+
+    // INLINE SERVICE WORKER REGISTRIERUNG FÜR PWA INSTALLATION
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            const swCode = `
+                self.addEventListener('install', (e) => self.skipWaiting());
+                self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
+                self.addEventListener('fetch', (e) => {
+                    // Reiner Passthrough, da die Datei lokal liegt
+                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+                });
+            `;
+            const blob = new Blob([swCode], {type: 'application/javascript'});
+            const swURL = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swURL).catch(err => console.log("SW Error", err));
+        });
+    }
+
+    function initApp() {
+        setTodayDate();
+        updateCategoryOptions();
+        updateUI();
+    }
+
+    initApp();
+</script>
+
+</body>
+</html>
