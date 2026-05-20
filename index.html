@@ -698,7 +698,8 @@
         return (monthsDiff % parseInt(template.interval || "1")) === 0;
     }
 
-    function updateUI() {
+function updateUI() {
+        // Startbeträge als Basis setzen
         let balances = { ...initialBalances };
 
         if (transactionList) transactionList.innerHTML = "";
@@ -710,22 +711,26 @@
         const heuteMitzternacht = new Date();
         heuteMitzternacht.setHours(0,0,0,0);
 
+        // Aktuellen Abrechnungszeitraum holen
         const zyklus = getAktuellerAbrechnungsZeitraum();
         const displayCycleEl = document.getElementById("display-cycle-dates");
         if (displayCycleEl) {
             displayCycleEl.textContent = `Abrechnungszeitraum: ${formatDate(zyklus.von)} - ${formatDate(zyklus.bis)}`;
         }
 
+        // KONTOSTAND-BERECHNUNG (NUR LAUFENDE UND ZUKÜNFTIGE BUCHUNGEN DIESES ZYKLUS BERÜCKSICHTIGEN)
         realTransactions.forEach(t => {
             const amt = parseFloat(t.amount);
             const bDate = new Date(t.date);
             bDate.setHours(0,0,0,0);
 
-            if (bDate <= heuteMitzternacht) {
+            // Nur Buchungen verrechnen, die im aktuellen Zyklus liegen UND bereits das heutige Datum erreicht/unterschritten haben
+            if (bDate >= zyklus.von && bDate <= heuteMitzternacht) {
                 if (t.type === "income") balances[t.account] += amt; else balances[t.account] -= amt;
             }
         });
 
+        // Kontostände im Dashboard anzeigen
         const displayGiroEl = document.getElementById("display-giro");
         const displaySparenEl = document.getElementById("display-sparen");
         const displayPrognosisEl = document.getElementById("display-prognosis");
@@ -733,6 +738,7 @@
         if (displayGiroEl) displayGiroEl.textContent = formatCurrency(balances.giro);
         if (displaySparenEl) displaySparenEl.textContent = formatCurrency(balances.sparen);
 
+        // 12-Monats-Prognose für das Sparkonto berechnen
         let projectedSavings = balances.sparen;
         const heute = new Date();
         
@@ -750,6 +756,7 @@
         }
         if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(projectedSavings)}`;
 
+        // Daueraufträge-Liste rendern
         if (recurringListSection) {
             if (templates.length > 0) {
                 recurringListSection.style.display = "block";
@@ -776,6 +783,7 @@
             }
         }
 
+        // Buchungsverlauf für den aktuellen Abrechnungsmonat filtern & anzeigen
         const aktuelleAbrechnungsBuchungen = realTransactions.filter(t => {
             const bDate = new Date(t.date);
             return bDate >= zyklus.von && bDate <= zyklus.bis;
