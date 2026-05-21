@@ -812,22 +812,31 @@
         }
     });
 
-    function autoRunRecurring() {
+function autoRunRecurring() {
         const zyklus = getAktuellerAbrechnungsZeitraum();
         const templates = transactions.filter(t => t.isTemplate);
         const realTransactions = transactions.filter(t => !t.isTemplate);
-        const heuteMitzternacht = new Date(); heuteMitzternacht.setHours(0,0,0,0);
+        
+        const heute = new Date();
+        const heuteJ = heute.getFullYear();
+        const heuteM = heute.getMonth();
+        const heuteT = heute.getDate();
+        const heuteMitzternacht = new Date(heuteJ, heuteM, heuteT, 0, 0, 0, 0);
 
         const faelligeTemplates = templates.filter(tmpl => {
             const tTag = parseInt(getDayFromDate(tmpl.date));
-            let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag);
-            if (checkDate < zyklus.von) checkDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag);
-            checkDate.setHours(0,0,0,0);
+            // Zieldatum im aktuellen Monat konstruieren
+            let checkDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag, 0, 0, 0, 0);
+            if (checkDate < zyklus.von) {
+                checkDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag, 0, 0, 0, 0);
+            }
             
-            const startDate = new Date(tmpl.date); startDate.setHours(0,0,0,0);
+            const startDate = new Date(tmpl.date);
+            startDate.setHours(0,0,0,0);
             if (checkDate < startDate) return false;
 
-            if (checkDate < heuteMitzternacht) return false;
+            // WICHTIG: Nur in die realen Buchungen pushen, wenn der Tag HEUTE oder in der VERGANGENHEIT liegt
+            if (checkDate > heuteMitzternacht) return false;
 
             if (checkDate >= zyklus.von && checkDate <= zyklus.bis) {
                 const bereitsGebucht = realTransactions.some(rt => 
