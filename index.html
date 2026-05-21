@@ -443,7 +443,7 @@
         return (monthsDiff % parseInt(template.interval || "1")) === 0;
     }
 
-    function updateUI() {
+  function updateUI() {
         let balances = { ...initialBalances };
         let projectedGiro = initialBalances.giro;
 
@@ -470,24 +470,23 @@
             const amt = parseFloat(t.amount);
             const bDate = new Date(t.date);
             
-            // Lokale Datumswerte der Buchung extrahieren (umgeht Zeitzonen-Verschiebung)
+            // Lokale Datumswerte der Buchung extrahieren
             const bJ = bDate.getFullYear();
             const bM = bDate.getMonth();
             const bT = bDate.getDate();
 
-            // Erstelle ein sauberes Vergleichsdatum für den Abrechnungszeitraum
-            const bDatePure = new Date(bJ, bM, bT, 0, 0, 0, 0);
-
-            // 1. REALE KONTOSTÄNDE (Nur Buchungen bis EINSCHLIESSLICH HEUTE)
+            // Exakter Check: Liegt die Buchung in der Zukunft?
             const istZukunft = (bJ > heuteJ) || 
                                (bJ === heuteJ && bM > heuteM) || 
                                (bJ === heuteJ && bM === heuteM && bT > heuteT);
 
+            // 1. REALE KONTOSTÄNDE (Nur Buchungen bis einschließlich HEUTE belasten das aktuelle Konto!)
             if (!istZukunft) {
                 if (t.type === "income") balances[t.account] += amt; else balances[t.account] -= amt;
             }
 
-            // 2. MONATSEND-PROGNOSE (Vergangenheit + kompletter aktueller Monat)
+            // 2. MONATSEND-PROGNOSE (Hier fließen alle Buchungen duzenteiligen Monats ein)
+            const bDatePure = new Date(bJ, bM, bT, 0, 0, 0, 0);
             if (t.account === "giro") {
                 if (bDatePure < zyklus.von) {
                     if (t.type === "income") projectedGiro += amt; else projectedGiro -= amt;
@@ -528,14 +527,14 @@
         }
         if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(projectedSavings)}`;
 
-        // Daueraufträge-Liste rendern
+        // Daueraufträge-Liste rendern (Aufgeteilt in Einnahmen und Ausgaben)
         if (recurringListSection) {
             if (templates.length > 0) {
                 recurringListSection.style.display = "block";
                 recurringListEl.innerHTML = "";
 
-                const incomeTemplates = templates.filter(t => t.isTemplate || t.type === "income").filter(t => t.type === "income").sort((a, b) => b.id - a.id);
-                const expenseTemplates = templates.filter(t => t.isTemplate || t.type === "expense").filter(t => t.type === "expense").sort((a, b) => b.id - a.id);
+                const incomeTemplates = templates.filter(t => t.type === "income").sort((a, b) => b.id - a.id);
+                const expenseTemplates = templates.filter(t => t.type === "expense").sort((a, b) => b.id - a.id);
 
                 const createTemplateCard = (t) => {
                     const item = document.createElement("div");
@@ -594,7 +593,6 @@
                     item.className = "item-card";
                     const prefix = t.type === "income" ? "+" : "-";
                     
-                    // Exakter Zukunftscheck für das Label
                     const bDate = new Date(t.date);
                     const isZukunft = (bDate.getFullYear() > heuteJ) || 
                                        (bDate.getFullYear() === heuteJ && bDate.getMonth() > heuteM) || 
