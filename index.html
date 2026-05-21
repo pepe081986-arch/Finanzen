@@ -465,37 +465,57 @@
             displayCycleEl.textContent = `Abrechnungszeitraum: ${formatDate(zyklus.von)} - ${formatDate(zyklus.bis)}`;
         }
 
-        // KETTEN-RECHNUNG ÜBER ALLE TRANSAKTIONEN SEIT BEGINN AN
+        // 1. KETTEN-RECHNUNG ÜBER ALLE REALEN TRANSAKTIONEN
         realTransactions.forEach(t => {
             const amt = parseFloat(t.amount);
             const bDate = new Date(t.date);
             
-            // Lokale Datumswerte der Buchung extrahieren
             const bJ = bDate.getFullYear();
             const bM = bDate.getMonth();
             const bT = bDate.getDate();
 
-            // Exakter Check: Liegt die Buchung in der Zukunft?
             const istZukunft = (bJ > heuteJ) || 
                                (bJ === heuteJ && bM > heuteM) || 
                                (bJ === heuteJ && bM === heuteM && bT > heuteT);
 
-            // 1. REALE KONTOSTÄNDE (Nur Buchungen bis einschließlich HEUTE belasten das aktuelle Konto!)
+            // Reale Kontostände (Nur bis einschließlich HEUTE)
             if (!istZukunft) {
                 if (t.type === "income") balances[t.account] += amt; else balances[t.account] -= amt;
             }
 
-            // 2. MONATSEND-PROGNOSE (Hier fließen alle Buchungen duzenteiligen Monats ein)
+            // In die Prognose fließen alle bereits existierenden Buchungen des Zyklus
             const bDatePure = new Date(bJ, bM, bT, 0, 0, 0, 0);
             if (t.account === "giro") {
-                if (bDatePure < zyklus.von) {
-                    if (t.type === "income") projectedGiro += amt; else projectedGiro -= amt;
-                } else if (bDatePure >= zyklus.von && bDatePure <= zyklus.bis) {
+                if (bDatePure >= zyklus.von && bDatePure <= zyklus.bis) {
                     if (t.type === "income") projectedGiro += amt; else projectedGiro -= amt;
                 }
             }
         });
 
+        // 2. DAUERAUFTRÄGE FÜR DEN RESTLICHEN MONAT IN DIE PROGNOSE EINRECHNEN
+        templates.forEach(tmpl => {
+            if (tmpl.account === "giro") {
+                const tTag = parseInt(getDayFromDate(tmpl.date));
+                // Konstruiere das Fälligkeitsdatum des Dauerauftrags im aktuellen Abrechnungsmonat
+                let duDate = new Date(zyklus.von.getFullYear(), zyklus.von.getMonth(), tTag, 0, 0, 0, 0);
+                if (duDate < zyklus.von) {
+                    duDate = new Date(zyklus.bis.getFullYear(), zyklus.bis.getMonth(), tTag, 0, 0, 0, 0);
+                }
+
+                // Wenn der Dauerauftrag im aktuellen Zyklus liegt UND sein Tag noch in der Zukunft liegt
+                const duJ = duDate.getFullYear();
+                const duM = duDate.getMonth();
+                const duT = duDate.getDate();
+                const istDURestMonat = (duJ > heuteJ) || 
+                                       (duJ === heuteJ && duM > heuteM) || 
+                                       (duJ === heuteJ && duM === heuteM && duT > heuteT);
+
+                if (duDate >= zyklus.von && duDate <= zyklus.bis && istDURestMonat) {
+                    const amt = parseFloat(tmpl.amount);
+                    if (tmpl.type === "income") projectedGiro += amt; else projectedGiro -= amt;
+                }
+            }
+        });
         const displayGiroEl = document.getElementById("display-giro");
         const displaySparenEl = document.getElementById("display-sparen");
         const displayPrognosisEl = document.getElementById("display-prognosis");
