@@ -533,9 +533,10 @@
                 recurringListSection.style.display = "block";
                 recurringListEl.innerHTML = "";
 
+              // KORREKTUR: Filtert die Einnahmen und Ausgaben sauber, ohne die originale 'templates'-Variable zu verfälschen
                 const incomeTemplates = templates.filter(t => t.type === "income").sort((a, b) => b.id - a.id);
                 const expenseTemplates = templates.filter(t => t.type === "expense").sort((a, b) => b.id - a.id);
-
+                
                 const createTemplateCard = (t) => {
                     const item = document.createElement("div");
                     item.className = "item-card";
