@@ -443,7 +443,6 @@
         return (monthsDiff % parseInt(template.interval || "1")) === 0;
     }
 
-    // VOLLFORTLAUFENDE KETTEN-BERECHNUNG FÜR KONTOSTAND UND PROGNOSE
     function updateUI() {
         let balances = { ...initialBalances };
         let projectedGiro = initialBalances.giro;
@@ -454,8 +453,11 @@
         const templates = transactions.filter(t => t.isTemplate);
         const realTransactions = transactions.filter(t => !t.isTemplate);
 
-        const heuteMitzternacht = new Date();
-        heuteMitzternacht.setHours(0,0,0,0);
+        // HEUTE sauber als lokales Datum ohne Uhrzeit bestimmen
+        const heute = new Date();
+        const heuteJ = heute.getFullYear();
+        const heuteM = heute.getMonth();
+        const heuteT = heute.getDate();
 
         const zyklus = getAktuellerAbrechnungsZeitraum();
         const displayCycleEl = document.getElementById("display-cycle-dates");
@@ -467,20 +469,29 @@
         realTransactions.forEach(t => {
             const amt = parseFloat(t.amount);
             const bDate = new Date(t.date);
-            bDate.setHours(0,0,0,0);
+            
+            // Lokale Datumswerte der Buchung extrahieren (umgeht Zeitzonen-Verschiebung)
+            const bJ = bDate.getFullYear();
+            const bM = bDate.getMonth();
+            const bT = bDate.getDate();
 
-            // 1. REALE KONTOSTÄNDE (Fortlaufende Kette bis HEUTE über alle Monate)
-            if (bDate <= heuteMitzternacht) {
+            // Erstelle ein sauberes Vergleichsdatum für den Abrechnungszeitraum
+            const bDatePure = new Date(bJ, bM, bT, 0, 0, 0, 0);
+
+            // 1. REALE KONTOSTÄNDE (Nur Buchungen bis EINSCHLIESSLICH HEUTE)
+            const istZukunft = (bJ > heuteJ) || 
+                               (bJ === heuteJ && bM > heuteM) || 
+                               (bJ === heuteJ && bM === heuteM && bT > heuteT);
+
+            if (!istZukunft) {
                 if (t.type === "income") balances[t.account] += amt; else balances[t.account] -= amt;
             }
 
-            // 2. MONATSEND-PROGNOSE (Fortlaufend alle alten Buchungen + ALLE Buchungen des aktuellen Monats)
+            // 2. MONATSEND-PROGNOSE (Vergangenheit + kompletter aktueller Monat)
             if (t.account === "giro") {
-                if (bDate < zyklus.von) {
-                    // Vergangene Monate voll anrechnen
+                if (bDatePure < zyklus.von) {
                     if (t.type === "income") projectedGiro += amt; else projectedGiro -= amt;
-                } else if (bDate >= zyklus.von && bDate <= zyklus.bis) {
-                    // Laufender Monat: Alle Buchungen (Vergangenheit & Zukunft) mitnehmen
+                } else if (bDatePure >= zyklus.von && bDatePure <= zyklus.bis) {
                     if (t.type === "income") projectedGiro += amt; else projectedGiro -= amt;
                 }
             }
@@ -493,7 +504,6 @@
         if (displayGiroEl) displayGiroEl.textContent = formatCurrency(balances.giro);
         if (displaySparenEl) displaySparenEl.textContent = formatCurrency(balances.sparen);
 
-        // Prognose-Text fürs Girokonto einblenden
         let displayGiroPrognosisEl = document.getElementById("display-giro-prognosis");
         if (!displayGiroPrognosisEl) {
             displayGiroPrognosisEl = document.createElement("div");
@@ -506,7 +516,6 @@
 
         // 12-Monats-Prognose für das Sparkonto
         let projectedSavings = balances.sparen;
-        const heute = new Date();
         for (let i = 1; i <= 12; i++) {
             let futureMonth = heute.getMonth() + i; let futureYear = heute.getFullYear();
             if (futureMonth > 11) { futureYear += Math.floor(futureMonth / 12); futureMonth = futureMonth % 12; }
@@ -519,14 +528,14 @@
         }
         if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(projectedSavings)}`;
 
-// Daueraufträge-Liste rendern (Aufgeteilt in Einnahmen und Ausgaben)
+        // Daueraufträge-Liste rendern
         if (recurringListSection) {
             if (templates.length > 0) {
                 recurringListSection.style.display = "block";
-                recurringListEl.innerHTML = ""; // Liste leeren
+                recurringListEl.innerHTML = "";
 
-                const incomeTemplates = templates.filter(t => t.type === "income").sort((a, b) => b.id - a.id);
-                const expenseTemplates = templates.filter(t => t.type === "expense").sort((a, b) => b.id - a.id);
+                const incomeTemplates = templates.filter(t => t.isTemplate || t.type === "income").filter(t => t.type === "income").sort((a, b) => b.id - a.id);
+                const expenseTemplates = templates.filter(t => t.isTemplate || t.type === "expense").filter(t => t.type === "expense").sort((a, b) => b.id - a.id);
 
                 const createTemplateCard = (t) => {
                     const item = document.createElement("div");
@@ -548,10 +557,8 @@
                     return item;
                 };
 
-                // 1. Zuerst alle Einnahmen-Daueraufträge anhängen
                 incomeTemplates.forEach(t => recurringListEl.appendChild(createTemplateCard(t)));
 
-                // 2. Trennlinie einfügen (nur wenn BEIDE Kategorien Einträge haben)
                 if (incomeTemplates.length > 0 && expenseTemplates.length > 0) {
                     const separator = document.createElement("div");
                     separator.className = "recurring-separator";
@@ -560,18 +567,18 @@
                     recurringListEl.appendChild(separator);
                 }
 
-                // 3. Danach alle Ausgaben-Daueraufträge anhängen
                 expenseTemplates.forEach(t => recurringListEl.appendChild(createTemplateCard(t)));
-
             } else {
                 recurringListSection.style.display = "none";
             }
         }
 
-        // Buchungsverlauf filterbar rendern (Nur aktueller Monat)
+        // Buchungsverlauf filterbar rendern
         let aktuelleAbrechnungsBuchungen = realTransactions.filter(t => {
             const bDate = new Date(t.date);
-            return bDate >= zyklus.von && bDate <= zyklus.bis;
+            const bJ = bDate.getFullYear(); const bM = bDate.getMonth(); const bT = bDate.getDate();
+            const bDatePure = new Date(bJ, bM, bT, 0, 0, 0, 0);
+            return bDatePure >= zyklus.von && bDatePure <= zyklus.bis;
         });
 
         if (currentFilter !== "all") {
@@ -586,16 +593,21 @@
                     const item = document.createElement("div");
                     item.className = "item-card";
                     const prefix = t.type === "income" ? "+" : "-";
-                    const isZukunft = new Date(t.date) > heuteMitzternacht;
+                    
+                    // Exakter Zukunftscheck für das Label
+                    const bDate = new Date(t.date);
+                    const isZukunft = (bDate.getFullYear() > heuteJ) || 
+                                       (bDate.getFullYear() === heuteJ && bDate.getMonth() > heuteM) || 
+                                       (bDate.getFullYear() === heuteJ && bDate.getMonth() === heuteM && bDate.getDate() > heuteT);
                     
                     item.innerHTML = `
                         <div class="item-details">
                             <span class="item-title">${t.description} ${isZukunft ? '<span class="badge-recurring" style="background:#fef3c7; color:#d97706;">Vorgemerkt</span>' : ''}</span>
                             <span class="item-sub">${formatDate(t.date)} • ${accountNames[t.account]} • ${t.category}</span>
                         </div>
-                        <div class="item-right">
+                        <div class="item-right" style="flex-shrink: 0;">
                             <span class="item-amount" style="${t.type === 'income' ? 'color: var(--success);' : 'color: var(--danger);'}">${prefix} ${formatCurrency(t.amount)}</span>
-                            <button class="btn-delete" data-id="${t.id}">×</button>
+                            <button class="btn-delete" data-id="${t.id}" style="flex-shrink: 0;">×</button>
                         </div>
                     `;
                     transactionList.appendChild(item);
@@ -603,7 +615,11 @@
             }
         }
 
-        renderCharts(realTransactions.filter(t => { const bDate = new Date(t.date); return bDate >= zyklus.von && bDate <= zyklus.bis; }));
+        renderCharts(realTransactions.filter(t => {
+            const bDate = new Date(t.date);
+            const bDatePure = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
+            return bDatePure >= zyklus.von && bDatePure <= zyklus.bis;
+        }));
         checkBackupStatus();
     }
 
