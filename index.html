@@ -168,7 +168,7 @@
 
         .list-container { display: flex; flex-direction: column; gap: 8px; }
         .item-card { background: var(--card-bg); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-        .item-details { display: flex; flex-direction: column; gap: 2px; max-width: 70%; }
+        .item-details { display: flex; flex-direction: column; gap: 2px; max-width: 70%; min-width: 0; }
         .item-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .item-sub { font-size: 0.75rem; color: var(--text-muted); }
         .item-right { display: flex; align-items: center; gap: 12px; }
@@ -519,7 +519,7 @@
         }
         if (displayPrognosisEl) displayPrognosisEl.textContent = `Prognose (in 12 Mon.): ${formatCurrency(projectedSavings)}`;
 
-       // Daueraufträge-Liste rendern (Aufgeteilt in Einnahmen und Ausgaben)
+// Daueraufträge-Liste rendern (Aufgeteilt in Einnahmen und Ausgaben)
         if (recurringListSection) {
             if (templates.length > 0) {
                 recurringListSection.style.display = "block";
@@ -536,19 +536,31 @@
                     const prefix = t.type === "income" ? "+" : "-";
                     item.innerHTML = `
                         <div class="item-details">
-                            <span class="item-title">${t.description} <span class="badge-recurring">${intervalLabels[t.interval || "1"]}</span></span>
+                            <span class="item-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${t.description} <span class="badge-recurring">${intervalLabels[t.interval || "1"]}</span></span>
                             <span class="item-sub">Tag: ${getDayFromDate(t.date)} • ${accountNames[t.account]}</span>
                         </div>
-                        <div class="item-right">
+                        <div class="item-right" style="flex-shrink: 0;">
                             <span class="item-amount" style="${t.type === 'income' ? 'color: var(--success);' : 'color: var(--danger);'}">${prefix} ${formatCurrency(t.amount)}</span>
-                            <button class="btn-edit" data-id="${t.id}" style="background: #e2e8f0; color: #475569; width: 28px; height: 28px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; border: none;">✏️</button>
-                            <button class="btn-delete" data-id="${t.id}">×</button>
+                            <button class="btn-edit" data-id="${t.id}" style="background: #e2e8f0; color: #475569; width: 28px; height: 28px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; border: none; flex-shrink: 0;">✏️</button>
+                            <button class="btn-delete" data-id="${t.id}" style="flex-shrink: 0;">×</button>
                         </div>
                     `;
                     return item;
                 };
 
+                // 1. Zuerst alle Einnahmen-Daueraufträge anhängen
                 incomeTemplates.forEach(t => recurringListEl.appendChild(createTemplateCard(t)));
+
+                // 2. Trennlinie einfügen (nur wenn BEIDE Kategorien Einträge haben)
+                if (incomeTemplates.length > 0 && expenseTemplates.length > 0) {
+                    const separator = document.createElement("div");
+                    separator.className = "recurring-separator";
+                    separator.style.borderTop = "1px solid var(--border-color)";
+                    separator.style.margin = "10px 4px";
+                    recurringListEl.appendChild(separator);
+                }
+
+                // 3. Danach alle Ausgaben-Daueraufträge anhängen
                 expenseTemplates.forEach(t => recurringListEl.appendChild(createTemplateCard(t)));
 
             } else {
